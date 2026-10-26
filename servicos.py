@@ -2130,9 +2130,12 @@ def lancar_oks_pendentes(conn):
             a = alvo(conn, e["alvo_tipo"], e["alvo_id"], operacao=True)
         except RegraViolada:
             continue
-        with transacao(conn):
-            conn.execute("UPDATE execucao SET medicao_id=? WHERE alvo_tipo=? AND alvo_id=?", (med["id"], e["alvo_tipo"], e["alvo_id"]))
-            _lancar_ok(conn, a, med["id"])
+        try:                                         # um OK com problema fica esperando; não derruba os outros
+            with transacao(conn):
+                conn.execute("UPDATE execucao SET medicao_id=? WHERE alvo_tipo=? AND alvo_id=?", (med["id"], e["alvo_tipo"], e["alvo_id"]))
+                _lancar_ok(conn, a, med["id"])
+        except RegraViolada:
+            continue
         n += 1
     return n
 
@@ -2397,6 +2400,10 @@ def criar_medicao(conn, numero, periodo_ini, periodo_fim, tipo="TESTE"):
                            "oficial ainda não foram validados. Use medição de TESTE.")
     if periodo_fim < periodo_ini:
         raise RegraViolada("Período inválido.")
+    import pacote_medicao                           # o pacote (e o fechamento) só cabe nas colunas do BM
+    if not 1 <= int(numero) <= pacote_medicao.MEDICOES:
+        raise RegraViolada(f"Número da medição de 1 a {pacote_medicao.MEDICOES}: o BM tem colunas para "
+                           f"{pacote_medicao.MEDICOES} medições (prazo de 540 dias). Mais que isso depende do aditivo de prazo.")
     sob = _one(conn, "SELECT numero FROM medicoes WHERE tipo=? AND NOT (periodo_fim < ? OR periodo_ini > ?)",
                tipo, periodo_ini, periodo_fim)
     if sob:

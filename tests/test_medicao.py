@@ -5,12 +5,14 @@ import os
 import sqlite3
 import sys
 import unittest
+from unittest import mock
 
 from openpyxl import load_workbook
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
+import apropriacao as AP  # noqa: E402
 import exportar  # noqa: E402
 import medicao as M  # noqa: E402
 import regras as R  # noqa: E402
@@ -175,6 +177,39 @@ class TestConferenciaEFechamento(BaseMedicao):
         self.assertTrue(r["teste"])
         with self.assertRaisesRegex(S.RegraViolada, "OFICIAL bloqueada"):
             S.criar_medicao(self.c, 3, "2026-12-01", "2026-12-31", tipo="OFICIAL")
+
+    def test_numero_fora_das_colunas_do_bm_e_recusado_na_criacao(self):
+        """Antes, a 19ª (ou a 0ª) era criada e nunca fechava: o fechamento confere as folhas, que só cabem em 18 colunas."""
+        for n in (0, 19):
+            with self.assertRaisesRegex(S.RegraViolada, "de 1 a 18"):
+                S.criar_medicao(self.c, n, "2027-12-01", "2027-12-31")
+        self.assertEqual(self.q("SELECT COUNT(*) FROM medicoes"), [(2,)])
+
+
+class TestOkPendente(BaseMedicao):
+    def setUp(self):
+        BaseCampo.setUp(self)                                            # sem medição aberta: o OK fica esperando
+
+    def test_ok_com_problema_fica_esperando_e_nao_derruba_a_criacao_da_medicao(self):
+        """Antes, a falha num único OK que esperava a medição desfazia a criação da medição inteira (a rota cria e
+        sincroniza na mesma transação) e os outros OKs também não entravam."""
+        for t in (TR, TR2):
+            self.concluir(t)
+            self.assertIsNone(S.ok_fiscalizacao(self.c, "TRECHO", t, "eng1", D))
+        orig = S._lancar_ok
+
+        def falha(conn, a, mid):
+            if a["ponto"] == TR:
+                raise S.RegraViolada("Parcela já medida (teste).")
+            return orig(conn, a, mid)
+        with mock.patch.object(S, "_lancar_ok", side_effect=falha):
+            with S.transacao(self.c):                                    # como a rota POST /api/medicao
+                mid = S.criar_medicao(self.c, 1, "2026-10-01", "2026-10-31")
+                self.assertEqual(AP.sincronizar(self.c), 1)
+        self.assertEqual(self.q("SELECT id FROM medicoes"), [(mid,)])
+        esperando = {e["alvo_id"] for e in S.oks_sem_medicao(self.c)}
+        self.assertEqual(esperando, {S.alvo(self.c, "TRECHO", TR)["id"]})  # o com problema continua esperando
+        self.assertTrue(self.lanc(mid))                                    # o outro entrou na medição
 
 
 class TestMigracaoV13(BaseMedicao):

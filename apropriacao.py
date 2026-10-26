@@ -671,8 +671,12 @@ def sincronizar(conn, hoje=None):
     hoje = hoje or RL.hoje().isoformat()
     n = S.lancar_oks_pendentes(conn)                   # OK interno registrado sem medição aberta
     for ap in _rows(conn.execute("SELECT * FROM apropriacoes WHERE estornado_em IS NULL ORDER BY data, id")):
-        if _propor(conn, ap):
-            n += 1
+        try:                                           # cada uma na sua parte: a que falha fica para depois
+            with transacao(conn):
+                if _propor(conn, ap):
+                    n += 1
+        except RegraViolada:
+            continue
     retidos = _rows(conn.execute(
         """SELECT l.*, m.status AS medicao_status, m.tipo AS medicao_tipo FROM medicao_lancamentos l
            JOIN medicoes m ON m.id=l.medicao_id
