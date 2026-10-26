@@ -8,6 +8,8 @@ tratado como "do próprio computador" (sem /configurar e sem entrar sem senha) e
 Secure, porque a hospedagem entrega só por https.
 """
 import argparse
+import gzip
+import hashlib
 import json
 import logging
 import logging.handlers
@@ -334,8 +336,27 @@ def p_recomposicao(b, c):
     return {"ok": True}
 
 
-def r_esteira(q, c):
-    return S.esteira(c)
+# a etapa do cadastro aparece para todos no Mapa iluminado; empresa, protocolo GDOC, memorando ESET, motivo de negativa e a
+# conferência interna só para quem trabalha a esteira (cadastro, conferência) ou a medição
+VER_ESTEIRA = ("cadastro", "conferir_cadastro", "medicao")
+CADASTRO_PUBLICO = ("trecho_id", "etapa", "revisao", "rotulo", "ponto", "extensao_m", "frente_id", "levantamento_m",
+                    "levantamento_completo", "medicao_id")
+
+
+def _cadastro_para(usuario, cad):
+    if cad is None or any(p in usuario["permissoes"] for p in VER_ESTEIRA):
+        return cad
+    return {k: v for k, v in cad.items() if k in CADASTRO_PUBLICO}
+
+
+def r_esteira(q, c, usuario):
+    return [_cadastro_para(usuario, x) for x in S.esteira(c)]
+
+
+def r_caminho(q, c, usuario):
+    cam = S.caminho_medicao(c, q.get("trecho"))
+    cam["cadastro"] = _cadastro_para(usuario, cam["cadastro"])
+    return cam
 
 
 def p_cadastro(b, c):
@@ -504,6 +525,15 @@ def p_dados_obra_reservar(b, c):
     return DO.reservar(c, b.get("data"), b.get("equipe_id"), b.get("linhas"), b.get("nos"), b.get("materiais") or [], b["por"])
 
 
+def p_dados_obra_contingencia(b, c):
+    return DO.contingencia(c, b.get("data"), b.get("equipe_id"), b.get("contingencia"), b["por"], b.get("materiais") or [],
+                           b.get("funcionarios"), b.get("maquinas"))
+
+
+def p_dados_obra_nao_realizada(b, c):
+    return DO.nao_realizada(c, b.get("data"), b.get("equipe_id"), b.get("motivo"), b["por"])
+
+
 def r_cronograma(q, c):
     return CR.consultar(c)
 
@@ -520,6 +550,8 @@ ROTAS_PLANEJAMENTO = {"/api/dados-obra/programar": ("planejar", p_dados_obra_pro
                       "/api/dados-obra/cancelar-lote": ("planejar", p_dados_obra_cancelar),
                       "/api/dados-obra/liberar": ("almox", p_dados_obra_liberar),
                       "/api/dados-obra/reservar": ("almox", p_dados_obra_reservar),
+                      "/api/dados-obra/contingencia": ("almox", p_dados_obra_contingencia),
+                      "/api/dados-obra/nao-realizada": ("planejar", p_dados_obra_nao_realizada),
                       "/api/cronograma": ("planejar", p_cronograma)}
 
 
@@ -837,7 +869,6 @@ def r_auditoria(q, c, usuario):
 GET = {"/api/resumo": r_resumo, "/api/buscar": r_buscar, "/api/detalhe": r_detalhe, "/api/previsto": r_previsto,
        "/api/mapa/estado": r_mapa_estado, "/api/equipe": r_equipe, "/api/estoque": r_estoque,
        "/api/compat-caesb": r_compat, "/api/nfs": r_nfs, "/api/histograma": r_histograma,
-       "/api/esteira": r_esteira, "/api/caminho": lambda q, c: S.caminho_medicao(c, q.get("trecho")),
        "/api/verificacao/pendentes": r_verificacao_pendentes,
        "/api/medicao/caminho": lambda q, c: P.caminho_da_medicao(c, int(q["id"]) if q.get("id") else None), "/api/medicoes": r_medicoes, "/api/medicao": r_medicao,
        "/api/movimentos": r_movimentos, "/api/reservas": r_reservas, "/api/consumo": r_consumo,
@@ -856,7 +887,8 @@ GET_PERM = {"/api/usuarios": (r_usuarios, "usuarios"),
             "/api/ns/fora-de-ordem": (lambda q, c: S.fora_de_ordem(c), "notas_servico")}      # o legado: só a engenharia
 GET_USUARIO = {"/api/auditoria": r_auditoria, "/api/diario": r_diario,
                "/api/drive": lambda q, c, u: DR.resumo(c, completo="documentos" in u["permissoes"]),      # recebem o usuário da sessão
-               "/api/ns": r_ns, "/api/ns/detalhe": r_ns_detalhe, "/api/ns/dia": r_ns_dia, "/api/apropriacoes": r_apropriacoes}
+               "/api/ns": r_ns, "/api/ns/detalhe": r_ns_detalhe, "/api/ns/dia": r_ns_dia, "/api/apropriacoes": r_apropriacoes,
+               "/api/esteira": r_esteira, "/api/caminho": r_caminho}
 POST = {"/api/funcionario": p_funcionario, "/api/maquina": p_maquina, "/api/movimento": p_movimento,
         "/api/nf/aceitar": p_nf_aceitar, "/api/checkout": p_checkout,
         "/api/apontamento": p_apontamento, "/api/foto": p_foto, "/api/ok-fiscal": p_ok_fiscal,
@@ -923,7 +955,7 @@ TELA_GET = {"/api/equipe": ("equipes", "mapa") + _CAMPO, "/api/estoque": _ALMOX 
             "/api/consumo": _ALMOX, "/api/histograma": ("equipes",) + _CAMPO,
             "/api/compras": ("compras",), "/api/inventarios": ("compras",), "/api/reservas-vencidas": ("compras",),
             "/api/ocorrencias": _CAMPO + ("mapa", "topografia", "cadastro_campo"),
-            "/api/esteira": ("iluminado", "mapa"), "/api/verificacao/pendentes": ("iluminado", "mapa", "medicao"),
+            "/api/esteira": ("iluminado", "mapa", "medicao"), "/api/verificacao/pendentes": ("iluminado", "mapa", "medicao"),
             "/api/medicao/caminho": ("medicao",), "/api/relatorios": ("relatorios",), "/api/medicoes": ("medicao",),
             "/api/medicao": ("medicao",), "/api/medicao/elegibilidade": ("medicao",), "/api/planilhas": ("lev",),
             "/api/documentos": ("admin",), "/api/drive": ("admin",), "/api/usuarios": ("admin",), "/api/auditoria": ("admin", "mapa"),
@@ -939,7 +971,50 @@ assert set(GET) | set(GET_PERM) | set(GET_USUARIO) == COMUNS | set(TELA_GET), "t
 TELA_ARQUIVO = {"/api/relatorios/exportar": ("relatorios",), "/api/medicao/exportar": ("medicao",), "/api/medicao/pacote/baixar": ("medicao",),   # downloads (/arquivos/: LEV)
                 "/api/ns/arquivo": TELAS_NS, "/api/apropriacao/arquivo": TELAS_APROPRIACAO}
 LIMITE_CORPO = 32 * 1024 * 1024                  # PDF + croqui + planilha da NS em base64 cabem; acima: 413 sem ler o corpo
-PUBLICOS = {"/", "/index.html", "/app.js", "/app.css", "/mapa_iluminado.js", "/mapa_iluminado.css"}
+# o código da tela não tem dado da obra: sai sem consultar o banco (nem esperar a trava) e antes do login
+PUBLICOS = {"/", "/index.html", "/app.js", "/app.css", "/iluminado.js", "/planejamento.js", "/notas.js", "/apropriacao.js",
+            "/mapa_iluminado.js", "/mapa_iluminado.css"}
+# Desempenho pelo link (D-158): o texto vai comprimido (gzip: JSON e código caem de 4 a 40 vezes) e o código da tela fica
+# no navegador. O index.html cita cada arquivo com ?v=<impressão do conteúdo>: com a impressão certa, o navegador guarda
+# por um ano sem perguntar; mudou o arquivo, muda a impressão e o endereço. Sem ela, pergunta (ETag) e recebe 304.
+COMPRIMIR = ("text/", "application/json", "application/javascript", "image/svg+xml")
+COMPRIMIR_MIN = 1024
+VALIDAVEIS = {"/api/mapa/geral"}                 # a geometria do REV02 só muda com o arquivo: o navegador guarda e pergunta
+_ESTATICOS = {}                                  # (caminho, montar) → (mtime, tamanho, impressão, bytes, gzip)
+_ESTATICOS_LOCK = threading.Lock()
+
+
+def _estatico(p, montar=None):
+    """O arquivo da tela lido uma vez (de novo só quando muda), com a impressão do conteúdo e a versão comprimida.
+    montar(bytes) → bytes: o que se acrescenta ao arquivo antes de guardar (a camada do Mapa iluminado no REV02)."""
+    st = os.stat(p)
+    with _ESTATICOS_LOCK:
+        e = _ESTATICOS.get((p, montar))
+        if e and e[0] == st.st_mtime_ns and e[1] == st.st_size:
+            return e
+    with open(p, "rb") as f:
+        dados = f.read()
+    if montar:
+        dados = montar(dados)
+    tipo = mimetypes.guess_type(p)[0] or "application/octet-stream"
+    gz = (gzip.compress(dados, 9 if len(dados) < 2 ** 20 else 6)          # o REV02 (11 MB): 0,5 s uma vez só
+          if len(dados) >= COMPRIMIR_MIN and tipo.startswith(COMPRIMIR) else None)
+    e = (st.st_mtime_ns, st.st_size, hashlib.sha256(dados).hexdigest()[:12], dados, gz)
+    with _ESTATICOS_LOCK:
+        _ESTATICOS[(p, montar)] = e
+    return e
+
+
+def _json(obj):
+    return json.dumps(obj, ensure_ascii=False, default=str).encode("utf-8")
+
+
+def _versionar(html):
+    """Põe ?v=<impressão> nos arquivos da tela citados no index.html (src="/app.js" → src="/app.js?v=…")."""
+    def troca(m):
+        p = os.path.join(WEB, m.group(2).decode())
+        return b'%s="/%s?v=%s"' % (m.group(1), m.group(2), _estatico(p)[2].encode()) if os.path.isfile(p) else m.group(0)
+    return re.sub(rb'(src|href)="/([\w.-]+\.(?:js|css))"', troca, html)
 
 
 class CorpoGrande(Exception):
@@ -953,21 +1028,31 @@ def _mapa_path():
 # ------------------------------------------------------------------ HTTP
 class Handler(BaseHTTPRequestHandler):
     server_version = "MorroDaCruz/1.0"
+    # HTTP/1.1: a conexão fica aberta entre os pedidos da tela (sem um aperto de mão por pedido) e o navegador aceita a
+    # ETag para perguntar "mudou?" (em HTTP/1.0 o Chrome a ignora e baixa tudo de novo). Toda resposta leva
+    # Content-Length; conexão parada por 2 min se fecha (cada uma ocupa uma linha de execução)
+    protocol_version = "HTTP/1.1"
+    timeout = 120
 
     def log_message(self, fmt, *args):
         pass
 
-    def _send(self, status, body, ctype="application/json; charset=utf-8", extra=None):
+    def _send(self, status, body, ctype="application/json; charset=utf-8", extra=None, gz=None):
         if isinstance(body, (dict, list)):
-            body = json.dumps(body, ensure_ascii=False, default=str).encode("utf-8")
+            body = _json(body)
         elif isinstance(body, str):
             body = body.encode("utf-8")
+        if len(body) >= COMPRIMIR_MIN and ctype.startswith(COMPRIMIR) and self._aceita_gzip():
+            body = gz or gzip.compress(body, 6)        # gz: a versão já comprimida (arquivo da tela)
+            extra = {**(extra or {}), "Content-Encoding": "gzip", "Vary": "Accept-Encoding"}
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         if "Cache-Control" not in (extra or {}):
             self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        if self.close_connection:
+            self.send_header("Connection", "close")
         if NUVEM:
             self.send_header("Strict-Transport-Security", "max-age=31536000")
         for k, v in (extra or {}).items():
@@ -976,6 +1061,22 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
         LOG.info("%s %s %s %s %d", self._ip(), getattr(self, "_login", "-") or "-", self.command,
                  urlparse(self.path).path, status)
+
+    def _aceita_gzip(self):
+        return any(p.split(";")[0].strip() == "gzip" for p in (self.headers.get("Accept-Encoding") or "").split(","))
+
+    def _validar(self, impressao, cache):
+        """ETag da resposta; se o navegador já tem esta versão, 304 sem corpo (True). A comparação é a fraca da RFC 9110:
+        o proxy do link (túnel da Cloudflare) recomprime e reescreve o ETag como W/"…", e é assim que o navegador o devolve."""
+        etag = f'"{impressao}"'
+        pedidos = [x.strip() for x in (self.headers.get("If-None-Match") or "").split(",")]
+        if "*" not in pedidos and etag not in [x[2:] if x.startswith("W/") else x for x in pedidos]:
+            return etag, False
+        self.send_response(304)
+        self.send_header("ETag", etag)
+        self.send_header("Cache-Control", cache)
+        self.end_headers()
+        return etag, True
 
     def _local(self):
         """Pedido feito no próprio computador (não veio pelo link da equipe: o túnel acrescenta Cf-Connecting-Ip).
@@ -1007,26 +1108,41 @@ class Handler(BaseHTTPRequestHandler):
         return {"erro": "Nenhum usuário cadastrado. No computador do servidor, crie o primeiro: python usuarios.py criar",
                 "sem_usuarios": True}
 
-    def _api(self, fn, arg):
+    def _api(self, fn, arg, validavel=False):
         try:
             with LOCK:
-                self._send(200, fn(arg, CONN))
+                corpo = _json(fn(arg, CONN))
         except A.AcessoNegado as e:
-            self._send(e.status, {"erro": str(e)})
+            return self._send(e.status, {"erro": str(e)})
         except R.RegraViolada as e:
-            self._send(422, {"erro": str(e)})
+            return self._send(422, {"erro": str(e)})
         except (KeyError, ValueError, TypeError) as e:
-            self._send(400, {"erro": f"Requisição inválida: {e}"})
+            return self._send(400, {"erro": f"Requisição inválida: {e}"})
         except Exception as e:  # noqa: BLE001 — devolve a falha ao usuário em vez de derrubar o servidor
             LOG.exception("falha em GET %s", self.path)
-            self._send(500, {"erro": f"Erro interno: {e}"})
+            return self._send(500, {"erro": f"Erro interno: {e}"})
+        # a resposta sai fora da trava: quem baixa devagar (celular pelo link) não segura o banco para os outros
+        if not validavel:
+            return self._send(200, corpo)
+        cache = "private, no-cache"
+        etag, igual = self._validar(hashlib.sha256(corpo).hexdigest()[:16], cache)
+        if not igual:
+            self._send(200, corpo, extra={"ETag": etag, "Cache-Control": cache})
 
-    def _static(self, raiz, rel):
+    def _static(self, raiz, rel, versao=None):
         p = os.path.realpath(os.path.join(raiz, rel))
         if not p.startswith(os.path.realpath(raiz) + os.sep) or not os.path.isfile(p):
             return self._send(404, {"erro": "não encontrado"})
-        with open(p, "rb") as f:
-            self._send(200, f.read(), mimetypes.guess_type(p)[0] or "application/octet-stream")
+        tipo = mimetypes.guess_type(p)[0] or "application/octet-stream"
+        if raiz != WEB:                                 # fotos da obra: lidas na hora, sem guardar no navegador
+            with open(p, "rb") as f:
+                return self._send(200, f.read(), tipo)
+        _, _, impressao, dados, gz = _estatico(p)
+        # com a impressão certa no endereço (?v=, posta pelo index.html) o navegador guarda e não pergunta mais
+        cache = "public, max-age=31536000, immutable" if versao == impressao else "no-cache"
+        etag, igual = self._validar(impressao, cache)
+        if not igual:
+            self._send(200, dados, tipo, {"ETag": etag, "Cache-Control": cache}, gz=gz)
 
     def do_GET(self):
         if NUVEM and self.headers.get("X-Forwarded-Proto") == "http":     # endereço digitado sem https
@@ -1046,8 +1162,8 @@ class Handler(BaseHTTPRequestHandler):
                         html = html.replace(b'id="dicaPrimeiro" class="aviso sugestao" hidden', b'id="dicaPrimeiro" class="aviso sugestao"')
                     else:
                         html = html.replace(b'id="dicaLocal" class="aviso sugestao" hidden', b'id="dicaLocal" class="aviso sugestao"')
-                return self._send(200, html, "text/html; charset=utf-8")
-            return self._static(WEB, "index.html" if u.path in ("/", "/index.html") else u.path.lstrip("/"))
+                return self._send(200, _versionar(html), "text/html; charset=utf-8")
+            return self._static(WEB, u.path.lstrip("/"), q.get("v"))
         with LOCK:
             sem = not A.ha_usuarios(CONN)
             usuario = None if sem else self._usuario()
@@ -1081,7 +1197,7 @@ class Handler(BaseHTTPRequestHandler):
             except A.AcessoNegado as e:
                 return self._send(e.status, {"erro": str(e)})
         if u.path in GET:
-            return self._api(GET[u.path], q)
+            return self._api(GET[u.path], q, u.path in VALIDAVEIS)
         if u.path in GET_PERM:
             fn, perm = GET_PERM[u.path]
             return self._api(lambda a, c: (A.exigir(usuario, perm), fn(a, c))[1], q)
@@ -1141,7 +1257,7 @@ class Handler(BaseHTTPRequestHandler):
                 with LOCK:
                     rel = DR.miniatura_de(CONN, rel) or rel
             return self._static(DIR_FOTOS, rel)
-        return self._static(WEB, u.path.lstrip("/"))
+        return self._static(WEB, u.path.lstrip("/"), q.get("v"))
 
     def _ns_arquivo(self, q, usuario):
         """PDF, croqui ou planilha de uma NS registrada, para abrir no navegador (inline, sem executar nada)."""
@@ -1200,8 +1316,10 @@ class Handler(BaseHTTPRequestHandler):
         rota = u.path
         if rota not in POST and rota not in POST_USUARIO and rota not in ("/api/login", "/api/logout", "/api/configurar-acesso",
                                                                           "/api/entrar-local", *ROTAS_DRIVE_ESPECIAIS):
+            self.close_connection = True                 # o corpo não foi lido: a conexão não serve para outro pedido
             return self._send(404, {"erro": "rota inexistente"})
         if self.headers.get("X-MC") != "1":            # só a própria aplicação grava (proteção contra CSRF)
+            self.close_connection = True
             return self._send(403, {"erro": "Requisição recusada: origem não reconhecida."})
         try:
             body = self._ler_corpo()
@@ -1404,12 +1522,14 @@ class Handler(BaseHTTPRequestHandler):
         p = _mapa_path()
         if not os.path.exists(p):
             return self._static(WEB, "mapa_ausente.html")
-        with open(p, encoding="utf-8") as f:
-            html = f.read()
-        tag = '<link rel="stylesheet" href="/mapa_iluminado.css"><script src="/mapa_iluminado.js"></script>'
-        i = html.lower().rfind("</body>")
-        html = html[:i] + tag + html[i:] if i >= 0 else html + tag
-        self._send(200, html, "text/html; charset=utf-8")
+        _, _, _, html, gz = _estatico(p, _com_camada_iluminada)          # 11 MB: montado e comprimido uma vez por versão
+        self._send(200, html, "text/html; charset=utf-8", gz=gz)
+
+
+def _com_camada_iluminada(html):
+    tag = b'<link rel="stylesheet" href="/mapa_iluminado.css"><script src="/mapa_iluminado.js"></script>'
+    i = html.lower().rfind(b"</body>")
+    return html[:i] + tag + html[i:] if i >= 0 else html + tag
 
 
 def configurar_log(pasta_db):
