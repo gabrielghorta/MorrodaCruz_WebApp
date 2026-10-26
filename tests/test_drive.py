@@ -197,6 +197,19 @@ class TestFila(BaseDrive):
         self.c.commit()
         return nf
 
+    def test_arquivo_de_ns_solto_nao_fica_na_fila_para_sempre(self):
+        """Reprodução: o PDF de uma NS que não chegou a ser registrada (envio abandonado) contava como "na fila", mas a fila
+        nunca o envia; o contador não zerava."""
+        eng = self.cliente("eng1")
+        self.preparar()
+        self.c.execute("""INSERT INTO documentos(tipo,arquivo,nome_original,sha256,bytes,mime,enviado_por,enviado_em)
+                          VALUES ('NS_PDF','ns/solta.pdf','NS solta.pdf','abc123',10,'application/pdf','eng1','2026-10-15T10:00:00')""")
+        self.c.commit()
+        self.ligar_google(eng)
+        self.assertEqual(eng.get("/api/drive")[1]["contagem"]["na_fila"], 2)          # a foto e a nota fiscal
+        self.assertEqual(eng.post("/api/drive/processar", {})[1]["enviados"], 2)
+        self.assertEqual(eng.get("/api/drive")[1]["contagem"]["na_fila"], 0)
+
     def test_fotos_e_notas_sobem_para_a_pasta_certa_sem_duplicar(self):
         eng, alm = self.cliente("eng1"), self.cliente("almox1")
         self.preparar()

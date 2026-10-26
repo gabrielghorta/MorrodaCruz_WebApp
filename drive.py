@@ -431,18 +431,19 @@ def _destino_documento(conn, d):
     return caminho, f"{_limpo(titulo)} ({d['sha256'][:8]}).{ext}"
 
 
+# o que ainda vai para a fila (sincronizar_fila) e o "na fila" da tela (resumo) contam pelo mesmo critério
+_FOTO_A_ENVIAR = """FROM fotos f WHERE sha256 IS NOT NULL AND COALESCE(validacao, '') NOT IN ('INVALIDA', 'ARQUIVO_AUSENTE')
+                      AND NOT EXISTS (SELECT 1 FROM envios_drive e WHERE e.origem='FOTO' AND e.ref_id=f.id)"""
+# arquivo de nota de serviço só depois de ligado a uma NS registrada (um envio abandonado não vira arquivo solto)
+_DOC_A_ENVIAR = f"""FROM documentos d WHERE NOT EXISTS (SELECT 1 FROM envios_drive e WHERE e.origem='DOCUMENTO' AND e.ref_id=d.id)
+                      AND (d.tipo NOT IN {DOC_NS} OR EXISTS (SELECT 1 FROM notas_servico n
+                                                             WHERE d.id IN (n.pdf_id, n.croqui_id, n.planilha_id)))"""
+
+
 def sincronizar_fila(conn):
     """Põe na fila as fotos válidas e os anexos ainda não enviados (inclusive os de antes da conexão)."""
-    fotos = _rows(conn.execute("""SELECT * FROM fotos f WHERE sha256 IS NOT NULL
-                                    AND COALESCE(validacao, '') NOT IN ('INVALIDA', 'ARQUIVO_AUSENTE')
-                                    AND NOT EXISTS (SELECT 1 FROM envios_drive e WHERE e.origem='FOTO' AND e.ref_id=f.id)
-                                  ORDER BY id"""))
-    # arquivo de nota de serviço só depois de ligado a uma NS registrada (um envio abandonado não vira arquivo solto)
-    docs = _rows(conn.execute(f"""SELECT * FROM documentos d
-                                  WHERE NOT EXISTS (SELECT 1 FROM envios_drive e WHERE e.origem='DOCUMENTO' AND e.ref_id=d.id)
-                                    AND (d.tipo NOT IN {DOC_NS} OR EXISTS (SELECT 1 FROM notas_servico n
-                                                                           WHERE d.id IN (n.pdf_id, n.croqui_id, n.planilha_id)))
-                                  ORDER BY id"""))
+    fotos = _rows(conn.execute(f"SELECT * {_FOTO_A_ENVIAR} ORDER BY id"))
+    docs = _rows(conn.execute(f"SELECT * {_DOC_A_ENVIAR} ORDER BY id"))
     if not fotos and not docs:
         return 0
     agora = _agora()
@@ -575,12 +576,7 @@ def reenviar(conn, envio_id):
 def resumo(conn, completo=False):
     out = obter_config(conn, completo)
     cont = dict(conn.execute("SELECT status, COUNT(*) FROM envios_drive GROUP BY status").fetchall())
-    faltam = conn.execute("""SELECT (SELECT COUNT(*) FROM fotos f WHERE sha256 IS NOT NULL
-                                       AND COALESCE(validacao,'') NOT IN ('INVALIDA','ARQUIVO_AUSENTE')
-                                       AND NOT EXISTS (SELECT 1 FROM envios_drive e WHERE e.origem='FOTO' AND e.ref_id=f.id))
-                                 + (SELECT COUNT(*) FROM documentos d
-                                       WHERE NOT EXISTS (SELECT 1 FROM envios_drive e WHERE e.origem='DOCUMENTO' AND e.ref_id=d.id))"""
-                          ).fetchone()[0]
+    faltam = conn.execute(f"SELECT (SELECT COUNT(*) {_FOTO_A_ENVIAR}) + (SELECT COUNT(*) {_DOC_A_ENVIAR})").fetchone()[0]
     so_drive = conn.execute("SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM fotos_no_drive").fetchone()
     out["contagem"] = {"enviados": cont.get("ENVIADO", 0), "na_fila": cont.get("PENDENTE", 0) + faltam, "com_erro": cont.get("ERRO", 0),
                        "fotos_so_no_drive": so_drive[0], "bytes_liberados": so_drive[1]}
