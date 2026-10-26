@@ -260,7 +260,7 @@ class TestNotaNoAlmoxarifado(BaseCompras):
         C.aprovar_nf_sem_pedido(self.c, anterior, "eng1")
         nf, ni = self._sem_pedido_aceita()
         self.assertEqual((self.saldo()[0], S.aguardando_aprovacao(self.c, MAT)), (10, 4))
-        with self.assertRaisesRegex(S.RegraViolada, "aceito ainda não devolvido \(4\)"):
+        with self.assertRaisesRegex(S.RegraViolada, r"aceito ainda não devolvido \(4\)"):
             C.devolver_ao_fornecedor(self.c, ni, D2, 5, "compra não aprovada", "almox1")
         C.devolver_ao_fornecedor(self.c, ni, D2, 4, "compra não aprovada", "almox1")
         self.assertEqual((self.saldo()[0], S.aguardando_aprovacao(self.c, MAT)), (10, 0))
@@ -359,6 +359,33 @@ class TestRecebimentoNumToque(BaseCompras):
         self.assertEqual([(i["quantidade"], i["recebido"]) for i in nota["itens"]], [(10, 8)])   # faltam 2: a receber
         r = C.receber_nota(self.c, nf, "almox1", D2)                                          # o resto chegou certo
         self.assertEqual((r["encerrada"], self.q("SELECT SUM(aceito), SUM(recusado) FROM inspecoes")), (True, [(9, 1)]))
+
+    def test_tubo_da_caesb_avariado_fica_recusado_e_a_nota_encerra(self):
+        """Reprodução: 10 tubos da remessa, 2 avariados. Antes, os 2 ficavam "a receber" para sempre e o próximo toque em
+        "Recebido conforme a nota" os punha no romaneio como aceitos."""
+        tubo = self.q("SELECT id FROM materiais WHERE propriedade='CAESB' ORDER BY id LIMIT 1")[0][0]
+        de = tubo.rsplit("DE", 1)[1]
+        self.c.execute("INSERT OR REPLACE INTO parametros(chave, valor, fonte) VALUES ('cnpj_caesb', ?, 'teste')", (NT.CNPJ_FORNECEDOR,))
+        nf = self.importar(506, [("T1", f"TUBO PEAD DE {de} PN 10", "M", 10, 0.01)])
+        C.conferir_nf(self.c, nf, 0, [{"linha_id": self.linhas(nf)[0][0], "material_id": tubo}], "almox1")
+        l1 = self.linhas(nf)[0][0]
+        antes = {c["material_id"]: c["retirado"] for c in S.compatibilizacao_caesb(self.c)}[tubo]
+        r = C.receber_nota(self.c, nf, "almox1", D2, problema={"observacao": "2 tubos amassados no descarregamento",
+                                                               "linhas": {str(l1): {"chegou": 10, "avariado": 2}}})
+        self.assertEqual((r["recusado"], r["encerrada"]), (2, True))
+        self.assertEqual(self.q("SELECT tipo, status, quantidade FROM movimentos WHERE nf_id=?", nf), [("ROMANEIO_CAESB", "ACEITO", 8)])
+        self.assertEqual(self.q("SELECT aceito, recusado, motivo_recusa FROM inspecoes"), [(8, 2, "2 tubos amassados no descarregamento")])
+        self.assertEqual({c["material_id"]: c["retirado"] for c in S.compatibilizacao_caesb(self.c)}[tubo], antes + 8)
+        with self.assertRaisesRegex(S.RegraViolada, "Só nota a conferir ou conferida"):
+            C.receber_nota(self.c, nf, "almox1", D2)                                    # nada sobra para um novo toque
+        ni = self.q("SELECT id FROM nf_itens WHERE nf_id=?", nf)[0][0]
+        with self.assertRaisesRegex(S.RegraViolada, "não volta ao fornecedor"):
+            C.devolver_ao_fornecedor(self.c, ni, D2, 1, "defeito", "almox1")
+        with self.assertRaisesRegex(S.RegraViolada, "recusado na inspeção"):         # na compra, o avariado é da inspeção
+            nf2 = self.importar(507, [(MAT, "peça", "UN", 3, 1.0)])
+            C.conferir_nf(self.c, nf2, 0, [{"linha_id": self.linhas(nf2)[0][0], "material_id": MAT}], "almox1")
+            ni2 = self.q("SELECT id FROM nf_itens WHERE nf_id=?", nf2)[0][0]
+            C.receber(self.c, nf2, D2, [{"nf_item_id": ni2, "quantidade": 3, "avariado": 1}], "almox1", motivo="x")
 
     def test_frete_e_servico_ficam_fora_do_estoque(self):
         nf = self.importar(505, [(MAT, "peça", "UN", 2, 1.0), ("F1", "Frete", "SV", 1, 30.0), ("S1", "SERVIÇO DE DESCARGA", "UN", 1, 9.0)])

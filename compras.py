@@ -547,9 +547,14 @@ def _recebido(conn, nf_item_id):
     return conn.execute("SELECT COALESCE(SUM(quantidade),0) FROM recebimento_itens WHERE nf_item_id=?", (nf_item_id,)).fetchone()[0]
 
 
-def receber(conn, nf_id, data, itens, por, documento=None):
+def _romaneio(conn, ni):
+    return bool(ni["linha_id"] and _one(conn, "SELECT 1 FROM nf_linhas WHERE id=? AND romaneio_caesb=1", ni["linha_id"]))
+
+
+def receber(conn, nf_id, data, itens, por, documento=None, motivo=None):
     """Entrega (parcial ou total): cada item entra em QUARENTENA, nunca direto no estoque. O tubo da Caesb (remessa) entra
-    como romaneio Caesb, com a quantidade que o almoxarife conferiu."""
+    como romaneio Caesb, com a quantidade que o almoxarife conferiu. Na remessa, o "avariado" do item conta como entregue
+    (a nota não fica esperando por ele), não entra no romaneio e fica registrado como recusado, com o motivo."""
     S.exigir_data_ocorrida(data, "Recebimento")
     nf = _one(conn, "SELECT * FROM notas_fiscais WHERE id=?", nf_id)
     if not nf or nf["status"] != "CONFERIDA":
@@ -567,26 +572,39 @@ def receber(conn, nf_id, data, itens, por, documento=None):
         resta = ni["quantidade"] - _recebido(conn, ni["id"])
         if q > resta + TOL:
             raise RegraViolada(f"{ni['material_id']}: entrega ({q:g}) maior que o saldo da nota ({resta:g}).")
-        plano.append((ni, q))
+        rom = _romaneio(conn, ni)
+        avar = float(it.get("avariado") or 0)
+        if avar and not rom:
+            raise RegraViolada(f"{ni['material_id']}: o avariado da compra é recusado na inspeção da entrega.")
+        if avar < -TOL or avar > q + TOL:
+            raise RegraViolada(f"{ni['material_id']}: o avariado fica entre 0 e o entregue ({q:g}).")
+        if avar > TOL and not str(motivo or "").strip():
+            raise RegraViolada("Descreva a avaria do tubo da Caesb.")
+        plano.append((ni, q, rom, round(max(avar, 0.0), 6)))
     if not plano:
         raise RegraViolada("Informe a quantidade entregue de ao menos um item.")
     with transacao(conn):
         rid = conn.execute("INSERT INTO recebimentos(nf_id,data,documento,recebido_por,registrado_em) VALUES (?,?,?,?,?)",
                            (nf_id, data, documento, por, _agora())).lastrowid
-        for ni, q in plano:
-            rom = ni["linha_id"] and _one(conn, "SELECT 1 FROM nf_linhas WHERE id=? AND romaneio_caesb=1", ni["linha_id"])
+        for ni, q, rom, avar in plano:
             if rom:                                    # remessa da Caesb: romaneio, sem quarentena de compra
+                doc = f"NF {nf['numero']} (remessa Caesb)" + (f"; {avar:g} avariado, fora do romaneio" if avar else "")
                 mid = conn.execute(
                     """INSERT INTO movimentos(data,material_id,tipo,quantidade,documento,status,nf_id,responsavel,ref_tipo,ref_id)
                        VALUES (?,?,'ROMANEIO_CAESB',?,?, 'ACEITO', ?, ?, 'RECEBIMENTO', ?)""",
-                    (data, ni["material_id"], q, f"NF {nf['numero']} (remessa Caesb)", nf_id, por, rid)).lastrowid
+                    (data, ni["material_id"], round(q - avar, 6), doc, nf_id, por, rid)).lastrowid
             else:
                 mid = conn.execute(
                     """INSERT INTO movimentos(data,material_id,tipo,quantidade,documento,status,nf_id,responsavel,ref_tipo,ref_id)
                        VALUES (?,?,'ENTRADA_NF',?,?, 'QUARENTENA', ?, ?, 'RECEBIMENTO', ?)""",
                     (data, ni["material_id"], q, f"NF {nf['numero']}", nf_id, por, rid)).lastrowid
-            conn.execute("INSERT INTO recebimento_itens(recebimento_id,nf_item_id,quantidade,movimento_id) VALUES (?,?,?,?)",
-                         (rid, ni["id"], q, mid))
+            ri = conn.execute("INSERT INTO recebimento_itens(recebimento_id,nf_item_id,quantidade,movimento_id) VALUES (?,?,?,?)",
+                              (rid, ni["id"], q, mid)).lastrowid
+            if avar:                                   # tubo da Caesb avariado: recusado na entrega, sem novo movimento
+                m = str(motivo).strip()
+                conn.execute("""INSERT INTO inspecoes(recebimento_item_id,aceito,recusado,laudo,motivo_recusa,inspecionado_por,
+                                  inspecionado_em,movimento_aceito_id) VALUES (?,?,?,?,?,?,?,?)""",
+                             (ri, round(q - avar, 6), avar, m, m, por, _agora(), mid))
         _encerrar_se_completa(conn, nf_id)          # remessa da Caesb toda recebida: não há inspeção a esperar
     return rid
 
@@ -708,14 +726,17 @@ def receber_nota(conn, nf_id, por, data, pedido_id=None, problema=None):
             if chegou < -TOL or avar < -TOL or chegou > resta + TOL or avar > chegou + TOL:
                 raise RegraViolada(f"Linha {ni['n_item']}: chegou deve ficar entre 0 e o que falta receber, e o avariado não "
                                    "passa do que chegou.")
-            if ni["romaneio_caesb"]:                   # tubo da Caesb: entra no romaneio só o que veio em condições
-                chegou, avar = chegou - avar, 0.0
             if chegou > TOL:
-                itens.append({"nf_item_id": ni["id"], "quantidade": round(min(chegou, resta), 6)})
-                avariado[ni["id"]] = round(avar, 6)
+                item = {"nf_item_id": ni["id"], "quantidade": round(min(chegou, resta), 6)}
+                if ni["romaneio_caesb"]:               # tubo da Caesb: o avariado é recusado na própria entrega
+                    item["avariado"] = round(avar, 6)
+                else:
+                    avariado[ni["id"]] = round(avar, 6)
+                itens.append(item)
         if not itens:
             raise RegraViolada("Nada a receber: informe o que chegou de ao menos uma linha.")
-        rid = receber(conn, nf_id, data, itens, por, documento=f"obs.: {obs}" if obs else None)
+        rid = receber(conn, nf_id, data, itens, por, documento=f"obs.: {obs}" if obs else None, motivo=obs)
+        recusado_caesb = sum(i.get("avariado", 0) for i in itens)
         insp = [{"recebimento_item_id": r["id"], "aceito": round(r["quantidade"] - avariado.get(r["nf_item_id"], 0), 6),
                  "recusado": avariado.get(r["nf_item_id"], 0)}
                 for r in _rows(conn.execute("""SELECT ri.id, ri.nf_item_id, ri.quantidade FROM recebimento_itens ri
@@ -724,7 +745,7 @@ def receber_nota(conn, nf_id, por, data, pedido_id=None, problema=None):
         if insp:
             inspecionar_entrega(conn, rid, insp, obs or None, por, data, obs or None)
         final = _one(conn, "SELECT status, sem_pedido, aprovada_em FROM notas_fiscais WHERE id=?", nf_id)
-    recusado = round(sum(i["recusado"] for i in insp), 6)
+    recusado = round(sum(i["recusado"] for i in insp) + recusado_caesb, 6)
     return {"recebimento_id": rid, "itens": len(itens), "recusado": recusado, "encerrada": final["status"] == "ENCERRADA",
             "aguarda_aprovacao": bool(final["sem_pedido"] and not final["aprovada_em"])}
 
@@ -737,6 +758,9 @@ def devolver_ao_fornecedor(conn, nf_item_id, data, quantidade, motivo, por, docu
     ni = _one(conn, "SELECT ni.*, nf.numero FROM nf_itens ni JOIN notas_fiscais nf ON nf.id=ni.nf_id WHERE ni.id=?", nf_item_id)
     if not ni:
         raise RegraViolada("Item da nota não encontrado.")
+    if _romaneio(conn, ni):
+        raise RegraViolada("O tubo da Caesb (remessa) não é compra: não volta ao fornecedor. A avaria na chegada fica "
+                           "recusada no recebimento.")
     q = float(quantidade or 0)
     aceito = conn.execute("""SELECT COALESCE(SUM(i.aceito),0) FROM inspecoes i JOIN recebimento_itens ri ON ri.id=i.recebimento_item_id
                              WHERE ri.nf_item_id=?""", (nf_item_id,)).fetchone()[0]
