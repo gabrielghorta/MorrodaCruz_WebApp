@@ -1140,11 +1140,26 @@ $('#medCaminho').addEventListener('click', ev => {
   const b = ev.target.closest('[data-med-lista]'); if (!b || !MED_CAMINHO) return;
   abrirListaIlu(CAMINHO_NUM.find(([k]) => k === b.dataset.medLista)[1], MED_CAMINHO[b.dataset.medLista]);
 });
+/* a tabela dos lançamentos sai em partes: com a obra inteira são dezenas de milhares de linhas */
+const MED_LINHAS = 300;
+let MED_LANC = [];
+function linhaLancamento([g, l]) {
+  return `<tr><td>${g}</td><td>${esc(curto(l.alvo_nome || ('NF ' + (l.nf_id || ''))))}</td><td>${esc(l.servico)}</td>
+      <td>${l.item ? esc(l.item) : '<span class="chip vermelho">sem item</span>'}</td><td class="n">${nf(l.quantidade, 3)}</td><td>${esc(l.unidade)}</td><td>${l.status === 'PENDENTE' ? `<span class="chip vermelho" title="${esc(l.motivo || '')}">pendente</span> <small>${esc(l.motivo || '')}</small>` : '<span class="chip verde">proposto</span>'}</td></tr>`;
+}
+$('#medResumo').addEventListener('click', ev => {
+  const b = ev.target.closest('#medLancMais'); if (!b) return;
+  const corpo = $('#medLancCorpo'), n = corpo.rows.length;
+  corpo.insertAdjacentHTML('beforeend', MED_LANC.slice(n, n + MED_LINHAS).map(linhaLancamento).join(''));
+  const resta = MED_LANC.length - corpo.rows.length;
+  if (resta > 0) b.textContent = `Mostrar mais (${resta} restantes)`; else b.remove();
+});
 async function carregarMedicao() {
   const id = $('#medSel').value; if (!id) return;
   MEDICAO_ATUAL = +id;
   carregarCaminhoMedicao(id);
   const r = await api('/api/medicao?id=' + id);
+  MED_LANC = Object.entries(r.gavetas).flatMap(([g, d]) => d.lancamentos.map(l => [g, l]));
   $('#medExport').href = '/api/medicao/exportar?id=' + id;
   $('#medPacote').href = '/api/medicao/pacote/baixar?id=' + id;
   carregarPacote(id);
@@ -1160,10 +1175,10 @@ async function carregarMedicao() {
       <tr class="destaque"><td><b>Total da medição</b></td><td class="n"><b>${brl(r.valor_total)}</b></td></tr></table>
     ${r.aviso_reajuste ? `<div class="aviso problema">${esc(r.aviso_reajuste)}</div>` : ''}
     ${r.pendentes ? `<div class="aviso info"><b>${r.pendentes}</b> lançamento(s) PENDENTE(S) — fora do valor até haver item/regra com fonte (não é R$ 0 contratual).</div>` : ''}
-    <div class="tabela"><table><thead><tr><th>Gav.</th><th>Trecho / atividade / NF</th><th>Serviço</th><th>Item BM</th><th class="n">Quant.</th><th>Unid.</th><th>Status</th></tr></thead><tbody>
-    ${Object.entries(r.gavetas).flatMap(([g, d]) => d.lancamentos.map(l => `<tr><td>${g}</td><td>${esc(curto(l.alvo_nome || ('NF ' + (l.nf_id || ''))))}</td><td>${esc(l.servico)}</td>
-      <td>${l.item ? esc(l.item) : '<span class="chip vermelho">sem item</span>'}</td><td class="n">${nf(l.quantidade, 3)}</td><td>${esc(l.unidade)}</td><td>${l.status === 'PENDENTE' ? `<span class="chip vermelho" title="${esc(l.motivo || '')}">pendente</span> <small>${esc(l.motivo || '')}</small>` : '<span class="chip verde">proposto</span>'}</td></tr>`)).join('') || '<tr><td colspan="7" class="vazio">Nada lançado nesta medição.</td></tr>'}
-    </tbody></table></div>`;
+    <div class="tabela"><table><thead><tr><th>Gav.</th><th>Trecho / atividade / NF</th><th>Serviço</th><th>Item BM</th><th class="n">Quant.</th><th>Unid.</th><th>Status</th></tr></thead><tbody id="medLancCorpo">
+    ${MED_LANC.slice(0, MED_LINHAS).map(linhaLancamento).join('') || '<tr><td colspan="7" class="vazio">Nada lançado nesta medição.</td></tr>'}
+    </tbody></table></div>
+    ${MED_LANC.length > MED_LINHAS ? `<button type="button" class="btn" id="medLancMais">Mostrar mais (${MED_LANC.length - MED_LINHAS} restantes)</button>` : ''}`;
   renderMedComplementos(r);
   carregarElegibilidade(id);
   $('#medTetos').className = r.tetos.length ? '' : 'vazio';
@@ -1172,7 +1187,7 @@ async function carregarMedicao() {
   aprCarregarRestricoes(id);
 }
 /* pacote no modelo oficial: as folhas da nª MC, com as fotos (até 6, na ordem) e a justificativa de cada item */
-const ESCOLHA = {};
+const ESCOLHA = {}, PACOTE = { fotos: {}, cand: {} };
 async function carregarPacote(id, abrir) {
   const r = await api('/api/medicao/pacote?id=' + id).catch(e => ({ erro: e.message }));
   if (String(id) !== $('#medSel').value) return;
@@ -1186,7 +1201,8 @@ async function carregarPacote(id, abrir) {
       <div class="kpi"><span>Folhas da ${esc(r.aba_mc)}</span><b>${r.folhas.length} + ADM</b></div>
       <div class="kpi"><span>Reajuste</span><b>R$ 0,00</b></div></div>
     ${r.avisos.length ? `<div class="aviso info"><ul style="margin:0 0 0 18px">${r.avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}`;
-  r.folhas.forEach(f => { ESCOLHA[f.item] = [...f.fotos]; });
+  PACOTE.fotos = r.fotos || {};
+  r.folhas.forEach(f => { ESCOLHA[f.item] = [...f.fotos]; PACOTE.cand[f.item] = f.candidatas; });
   $('#medFolhas').innerHTML = r.folhas.map((f, i) => folhaMcHtml(f, i, r.frases, edita)).join('')
     || '<p class="vazio">Nenhum item com quantidade proposta: o pacote sai só com a folha da administração local.</p>';
   $$('#medFolhas details.folha-mc').forEach(marcarEscolha);
@@ -1203,10 +1219,7 @@ function folhaMcHtml(f, i, frases, edita) {
       ${just ? '<span class="chip azul">com justificativa</span>' : f.excede ? '<span class="chip vermelho">falta justificativa</span>' : ''}</summary>
     <p class="vazio" style="margin:4px 0 8px">Chave ${esc(f.item)} · ${f.linhas} linha(s) no memorial · acumulado ${nf(f.acumulado, 3)} de ${nf(f.contrato, 3)} ${esc(f.unidade || '')}.
       ${edita ? 'Toque nas fotos para escolher até 6; o número é a ordem na folha.' : ''}</p>
-    <div class="fotos fotos-mc">${f.candidatas.map(c => `<figure data-foto="${c.id}">
-        <img src="/fotos/${esc(c.arquivo)}" loading="lazy" alt="Foto ${esc(c.categoria.toLowerCase())} de ${esc(curto(c.alvo))}"><span class="ordem"></span>
-        <figcaption>${esc(String(c.data_hora || '').replace('T', ' ').slice(0, 16))} · ${esc(c.categoria.toLowerCase())}<br>${esc(curto(c.alvo))}</figcaption></figure>`).join('')
-      || '<p class="vazio">Sem fotos válidas dos trechos e nós deste item.</p>'}</div>
+    <div class="fotos fotos-mc" data-cand>${f.candidatas.length ? '' : '<p class="vazio">Sem fotos válidas dos trechos e nós deste item.</p>'}</div>
     <label style="margin-top:10px">Justificativa técnica${f.excede ? ' <b>— obrigatória: acima de 100 % do contrato</b>' : ''}
       <select data-frase ${edita ? '' : 'disabled'}><option value="">Usar uma frase pronta…</option>${frases.map(x => `<option>${esc(x)}</option>`).join('')}</select></label>
     <textarea data-just rows="3" maxlength="600" ${edita ? '' : 'disabled'} placeholder="Escreva ou escolha uma frase pronta">${esc(just)}</textarea>
@@ -1214,6 +1227,18 @@ function folhaMcHtml(f, i, frases, edita) {
       <button type="button" class="btn" data-sugestao>Voltar às fotos sugeridas</button></div>` : ''}
   </details>`;
 }
+function candidatasHtml(item) {
+  return (PACOTE.cand[item] || []).map(id => PACOTE.fotos[id]).filter(Boolean).map(c => `<figure data-foto="${c.id}">
+      <img src="/fotos/${esc(c.arquivo)}" loading="lazy" alt="Foto ${esc(c.categoria.toLowerCase())} de ${esc(curto(c.alvo))}"><span class="ordem"></span>
+      <figcaption>${esc(String(c.data_hora || '').replace('T', ' ').slice(0, 16))} · ${esc(c.categoria.toLowerCase())}<br>${esc(curto(c.alvo))}</figcaption></figure>`).join('');
+}
+/* as candidatas de uma folha só são desenhadas quando ela abre: com a obra inteira, são milhares de fotos */
+$('#medFolhas').addEventListener('toggle', ev => {
+  const det = ev.target;
+  if (!det.matches || !det.matches('details.folha-mc') || !det.open) return;
+  const box = det.querySelector('[data-cand]');
+  if (box && !box.dataset.pronto) { box.dataset.pronto = '1'; box.innerHTML = candidatasHtml(det.dataset.item) || box.innerHTML; marcarEscolha(det); }
+}, true);
 function marcarEscolha(det) {
   const sel = ESCOLHA[det.dataset.item] || [];
   det.querySelectorAll('[data-foto]').forEach(fig => {

@@ -302,9 +302,12 @@ class TestPacoteHTTP(BasePacote):
         r = self.ok(eng.get(f"/api/medicao/pacote?id={self.mid}"))
         f = next(x for x in r["folhas"] if x["item"] == "2.2_5.8.44")
         self.assertEqual(f["linhas"], 1)
-        self.assertEqual(set(f["candidatas"][0]), {"id", "arquivo", "data_hora", "categoria", "alvo_tipo", "alvo_id", "alvo"})
+        # cada foto vai uma vez em r["fotos"]; a folha leva só os ids das candidatas
+        self.assertTrue(all(isinstance(i, int) for i in f["candidatas"]))
+        self.assertEqual(set(r["fotos"][str(f["candidatas"][0])]), {"id", "arquivo", "data_hora", "categoria", "alvo_tipo", "alvo_id", "alvo"})
+        self.assertEqual({str(i) for x in r["folhas"] for i in x["candidatas"]}, set(r["fotos"]))
         self.assertEqual(r["frases"], PM.FRASES)
-        escolha = [f["candidatas"][1]["id"]]
+        escolha = [f["candidatas"][1]]
         self.ok(eng.post("/api/medicao/folha", {"medicao_id": self.mid, "item": "2.2_5.8.44", "fotos": escolha,
                                                 "justificativa": PM.FRASES[0], "por": "outro"}))
         self.assertEqual([tuple(x) for x in self.c.execute("SELECT por, fotos FROM medicao_folhas")],

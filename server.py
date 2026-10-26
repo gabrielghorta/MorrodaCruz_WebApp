@@ -378,9 +378,17 @@ def p_medicao(b, c):
     return {"id": mid, "liberados": AP.sincronizar(c)}          # o que estava parado e já foi liberado entra nesta
 
 
+# o que a tela Medição usa de cada lançamento (com a obra inteira são dezenas de milhares: o resto pesava megabytes)
+_CAMPOS_LANCAMENTO = ("id", "gaveta", "servico", "item", "unidade", "quantidade", "status", "motivo", "restricao",
+                      "alvo_tipo", "alvo_id", "alvo_nome", "nf_id")
+
+
 def r_medicao(q, c):
     mid = int(q["id"])
-    return {**S.resumo_medicao(c, mid), **M.complementos(c, mid)}
+    r = {**S.resumo_medicao(c, mid), **M.complementos(c, mid)}
+    for g in r["gavetas"].values():
+        g["lancamentos"] = [{k: l.get(k) for k in _CAMPOS_LANCAMENTO} for l in g["lancamentos"]]
+    return r
 
 
 def _periodo(q):
@@ -403,12 +411,21 @@ def p_medicao_fechar(b, c):
 
 
 def r_medicao_pacote(q, c):
-    """As folhas da nª MC no modelo oficial: fotos (escolhidas ou sugeridas), candidatas, justificativa e avisos."""
+    """As folhas da nª MC no modelo oficial: fotos (escolhidas ou sugeridas), candidatas, justificativa e avisos.
+    Cada foto vai uma vez só em `fotos` (id → dados); a folha leva os ids das candidatas (o mesmo trecho entra em vários
+    itens, e a lista inteira repetida em cada folha pesava megabytes)."""
     r = PM.resumo(c, int(q["id"]))
+    fotos, nomes = {}, {}
     for f in r["folhas"]:
-        f["candidatas"] = [{k: x[k] for k in ("id", "arquivo", "data_hora", "categoria", "alvo_tipo", "alvo_id")}
-                           | {"alvo": S.nome_alvo(c, x["alvo_tipo"], x["alvo_id"])} for x in f["candidatas"]]
+        for x in f["candidatas"]:
+            if x["id"] not in fotos:
+                k = (x["alvo_tipo"], x["alvo_id"])
+                if k not in nomes:
+                    nomes[k] = S.nome_alvo(c, *k)
+                fotos[x["id"]] = {k: x[k] for k in ("id", "arquivo", "data_hora", "categoria", "alvo_tipo", "alvo_id")} | {"alvo": nomes[k]}
+        f["candidatas"] = [x["id"] for x in f["candidatas"]]
         f["linhas"] = len(f["linhas"])
+    r["fotos"] = fotos
     return r
 
 
@@ -1259,13 +1276,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._static(DIR_FOTOS, rel)
         return self._static(WEB, u.path.lstrip("/"), q.get("v"))
 
-    def _ns_arquivo(self, q, usuario):
-        """PDF, croqui ou planilha de uma NS registrada, para abrir no navegador (inline, sem executar nada)."""
+    def _servir_documento(self, buscar):
+        """Abre no navegador um documento guardado (inline, sem executar nada). `buscar()` roda dentro da trava e devolve
+        (doc, nome); o arquivo que já saiu do servidor para o Drive redireciona para o link de lá."""
         try:
             with LOCK:
-                ns, doc, nome = NS.arquivo(CONN, int(q.get("id") or 0), q.get("qual") or "pdf")
-                if not _ns_visivel(usuario, ns):
-                    raise A.AcessoNegado("Esta nota de serviço não é de uma tela que o seu perfil abre.", 403)
+                doc, nome = buscar()
                 caminho = os.path.join(C.documento_dir(CONN), doc["arquivo"])
                 no_drive = (DR.por_ref(CONN, "DOCUMENTO", [doc["id"]]) or {}).get(doc["id"]) or {}
         except A.AcessoNegado as e:
@@ -1284,26 +1300,18 @@ class Handler(BaseHTTPRequestHandler):
                           {"Content-Disposition": f"inline; filename*=UTF-8''{quote(nome)}",
                            "Content-Security-Policy": "sandbox", "Cache-Control": "private, max-age=3600"})
 
+    def _ns_arquivo(self, q, usuario):
+        """PDF, croqui ou planilha de uma NS registrada."""
+        def buscar():
+            ns, doc, nome = NS.arquivo(CONN, int(q.get("id") or 0), q.get("qual") or "pdf")
+            if not _ns_visivel(usuario, ns):
+                raise A.AcessoNegado("Esta nota de serviço não é de uma tela que o seu perfil abre.", 403)
+            return doc, nome
+        return self._servir_documento(buscar)
+
     def _apropriacao_arquivo(self, q, usuario):
-        """Evidência de uma apropriação direta ou o documento da Caesb de um item a aprovar (inline, sem executar nada)."""
-        try:
-            with LOCK:
-                doc, nome = AP.arquivo(CONN, int(q.get("doc") or 0))
-                caminho = os.path.join(C.documento_dir(CONN), doc["arquivo"])
-                no_drive = (DR.por_ref(CONN, "DOCUMENTO", [doc["id"]]) or {}).get(doc["id"]) or {}
-        except R.RegraViolada as e:
-            return self._send(404, {"erro": str(e)})
-        except (KeyError, ValueError, TypeError) as e:
-            return self._send(400, {"erro": f"Requisição inválida: {e}"})
-        if not os.path.isfile(caminho):
-            if no_drive.get("drive_link"):
-                return self._send(302, "", "text/plain; charset=utf-8", {"Location": no_drive["drive_link"]})
-            return self._send(404, {"erro": "O arquivo não está no servidor."})
-        with open(caminho, "rb") as f:
-            dados = f.read()
-        return self._send(200, dados, doc["mime"] or "application/octet-stream",
-                          {"Content-Disposition": f"inline; filename*=UTF-8''{quote(nome)}",
-                           "Content-Security-Policy": "sandbox", "Cache-Control": "private, max-age=3600"})
+        """Evidência de uma apropriação direta ou o documento da Caesb de um item a aprovar."""
+        return self._servir_documento(lambda: AP.arquivo(CONN, int(q.get("doc") or 0)))
 
     def _ler_corpo(self):
         n = int(self.headers.get("Content-Length") or 0)

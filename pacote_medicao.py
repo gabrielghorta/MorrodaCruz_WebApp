@@ -144,13 +144,18 @@ def _alvo_info(conn, tipo, aid):
     return {"nome": a["nome"], "projeto": a.get("pb"), "ref": a.get("numero")}
 
 
-def _linhas_memorial(conn, medicao_id, item, unidade):
-    """Uma linha por lançamento PROPOSTO do item: trecho inteiro em metro sai em estacas (20 m) da estaca 0 ao fim."""
+def _linhas_memorial(conn, medicao_id, item, unidade, infos=None):
+    """Uma linha por lançamento PROPOSTO do item: trecho inteiro em metro sai em estacas (20 m) da estaca 0 ao fim.
+    `infos` guarda o que já se sabe de cada trecho/nó (o mesmo trecho aparece em vários itens)."""
+    infos = {} if infos is None else infos
     out = []
     for l in conn.execute(
             """SELECT l.id, l.alvo_tipo, l.alvo_id, l.quantidade FROM medicao_lancamentos l JOIN bm_itens b ON b.id=l.bm_item_id
                WHERE l.medicao_id=? AND l.status='PROPOSTO' AND b.item=? ORDER BY l.id""", (medicao_id, item)):
-        info = _alvo_info(conn, l["alvo_tipo"], l["alvo_id"]) if l["alvo_id"] else {"nome": None, "projeto": None, "ref": None}
+        k = (l["alvo_tipo"], l["alvo_id"])
+        if l["alvo_id"] and k not in infos:
+            infos[k] = _alvo_info(conn, *k)
+        info = infos[k] if l["alvo_id"] else {"nome": None, "projeto": None, "ref": None}
         q = l["quantidade"]
         lin = {"lancamento_id": l["id"], "nomenclatura": info["nome"], "projeto": info["projeto"], "ref": info["ref"],
                "quantidade": q, "estacas": None}
@@ -164,11 +169,15 @@ def _linhas_memorial(conn, medicao_id, item, unidade):
     return out
 
 
-def _candidatas(conn, alvos):
+def _candidatas(conn, alvos, por_alvo=None):
+    """As fotos válidas dos trechos e nós, da mais nova para a mais antiga. `por_alvo` guarda as de cada um entre as folhas."""
+    por_alvo = {} if por_alvo is None else por_alvo
     fotos = []
-    for tipo, aid in alvos:
-        fotos += _rows(conn.execute(f"""SELECT id, alvo_tipo, alvo_id, categoria, arquivo, data_hora, carimbo FROM fotos
-                                        WHERE alvo_tipo=? AND alvo_id=? AND {S.FOTO_VALIDA}""", (tipo, aid)))
+    for k in alvos:
+        if k not in por_alvo:
+            por_alvo[k] = _rows(conn.execute(f"""SELECT id, alvo_tipo, alvo_id, categoria, arquivo, data_hora, carimbo FROM fotos
+                                                 WHERE alvo_tipo=? AND alvo_id=? AND {S.FOTO_VALIDA}""", k))
+        fotos += por_alvo[k]
     fotos.sort(key=lambda f: (f["data_hora"] or "", f["id"]), reverse=True)
     return fotos
 
@@ -188,7 +197,7 @@ def folhas(conn, medicao_id):
     for n, por in q.items():
         for k, v in por.items():
             acum[k] += v
-    out = []
+    out, infos, por_alvo = [], {}, {}
     for k in sorted(q[med["numero"]], key=lambda k: (vert[k]["linha_origem"] if k in vert else 10 ** 9, k)):
         if k == CHAVE_ADM or k not in vert or abs(q[med["numero"]][k]) < 1e-12:
             continue
@@ -196,7 +205,7 @@ def folhas(conn, medicao_id):
         alvos = [(r[0], r[1]) for r in conn.execute(
             """SELECT DISTINCT l.alvo_tipo, l.alvo_id FROM medicao_lancamentos l WHERE l.medicao_id=? AND l.status='PROPOSTO'
                AND l.bm_item_id=? AND l.alvo_tipo IN ('TRECHO','ATIVIDADE')""", (medicao_id, b["id"]))]
-        cand = _candidatas(conn, alvos)
+        cand = _candidatas(conn, alvos, por_alvo)
         e = esc.get(k) or {}
         ids_validos = {f["id"] for f in cand}
         if e.get("fotos") is not None:
@@ -210,7 +219,7 @@ def folhas(conn, medicao_id):
                     "contrato": contrato, "acumulado": round(acum[k], 6),
                     "percentual": round(acum[k] / float(contrato), 6) if contrato else None,
                     "excede": excede, "justificativa": e.get("justificativa"), "fotos": fotos, "fotos_sugeridas": sugeridas,
-                    "candidatas": cand, "linhas": _linhas_memorial(conn, medicao_id, k, b["unidade"])})
+                    "candidatas": cand, "linhas": _linhas_memorial(conn, medicao_id, k, b["unidade"], infos)})
     return out
 
 

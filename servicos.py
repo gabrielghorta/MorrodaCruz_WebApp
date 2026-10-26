@@ -138,9 +138,19 @@ def _agora():
     return RL.agora().isoformat(timespec="seconds")
 
 
+_MAPA_SERVICOS = {}
+
+
 def mapa_servicos():
-    with open(os.path.join(BASE, "config", "servicos_rede.json"), encoding="utf-8") as f:
-        return json.load(f)
+    """config/servicos_rede.json, lido de novo só quando o arquivo muda (o cálculo da medição pede por lançamento).
+    Quem chama só lê: não altere o dicionário devolvido."""
+    caminho = os.path.join(BASE, "config", "servicos_rede.json")
+    st = os.stat(caminho)
+    chave = (caminho, st.st_mtime_ns, st.st_size)
+    if _MAPA_SERVICOS.get("chave") != chave:
+        with open(caminho, encoding="utf-8") as f:
+            _MAPA_SERVICOS.update(chave=chave, cfg=json.load(f))
+    return _MAPA_SERVICOS["cfg"]
 
 
 # ------------------------------------------------------------------ alvos: trecho e atividade (elemento × frente)
@@ -2533,8 +2543,15 @@ def _resumo_calculado(conn, medicao_id, usar_congelado=True):
                   COALESCE(b.preco_unitario, n.preco_aprovado) AS preco_unitario
            FROM medicao_lancamentos l LEFT JOIN bm_itens b ON b.id=l.bm_item_id LEFT JOIN itens_novos_base n ON n.id=l.item_novo_id
            WHERE l.medicao_id=? ORDER BY l.gaveta, l.id""", (medicao_id,)))
+    nomes = {}                                      # um trecho tem dezenas de lançamentos: o nome é buscado uma vez
     for l in lanc:
-        l["alvo_nome"] = nome_alvo(conn, l["alvo_tipo"], l["alvo_id"]) if l["alvo_id"] else None
+        if l["alvo_id"]:
+            k = (l["alvo_tipo"], l["alvo_id"])
+            if k not in nomes:
+                nomes[k] = nome_alvo(conn, *k)
+            l["alvo_nome"] = nomes[k]
+        else:
+            l["alvo_nome"] = None
         if usar_congelado and l["preco_congelado"] is not None:
             l["preco_unitario"], l["classificacao"], l["item"] = (l["preco_congelado"], l["classificacao_congelada"],
                                                                   l["item_congelado"])
@@ -2574,7 +2591,8 @@ def _resumo_calculado(conn, medicao_id, usar_congelado=True):
     if any("estimativa" in (l["observacao"] or "") for l in lanc):
         hipoteses.append("Escavação em dois itens (5.4.11/5.4.13 e 5.4.15/5.4.14): rateio pela proporção contratual — "
                          "estimativa sem critério aprovado (matriz, item 11).")
-    if any(l["servico"] == mapa_servicos()["solda"]["servico"] for l in lanc):
+    solda = mapa_servicos()["solda"]["servico"]
+    if any(l["servico"] == solda for l in lanc):
         hipoteses.append("Soldas: ⌈L/6⌉ por barra de 6 m — estimativa sem validação.")
     return {
         "medicao": med, "teste": med["tipo"] == "TESTE", "simulacao": True, "hipoteses": hipoteses,

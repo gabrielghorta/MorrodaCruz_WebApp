@@ -358,22 +358,31 @@ def _palavras(texto):
     return re.findall(r"[a-z]+|\d+", t)                  # "DE63" → de, 63
 
 
-def sugerir_materiais(conn, nf_id):
+def indice_materiais(conn):
+    """Os materiais e as palavras e medidas de cada descrição. A lista de notas sugere para todas de uma vez: o índice é
+    montado uma vez por consulta e passado a sugerir_materiais."""
+    mats = {r["id"]: r for r in _rows(conn.execute("SELECT id, descricao, unidade, propriedade FROM materiais"))}
+    palavras = {}
+    for m in mats.values():
+        ps = _palavras(m["descricao"])
+        palavras[m["id"]] = ({p for p in ps if not p.isdigit()}, {p for p in ps if p.isdigit()})
+    return mats, palavras
+
+
+def sugerir_materiais(conn, nf_id, indice=None):
     """O material provável de cada linha da nota, e o porquê. Nada é gravado: quem confere aceita ou troca.
     1. o código do produto é o id de um material (ex.: 5.1_1.14.15);
     2. a mesma linha (código ou descrição) já foi conferida numa nota anterior deste fornecedor;
     3. a descrição bate com a de um material: as mesmas medidas (todos os números) e a maior parte das palavras; empate
-       entre dois materiais não sugere nada."""
+       entre dois materiais não sugere nada.
+    `indice`: o de indice_materiais, quando a mesma consulta sugere para várias notas."""
     nf = _one(conn, "SELECT * FROM notas_fiscais WHERE id=?", nf_id)
     if not nf:
         raise RegraViolada("Nota não encontrada.")
-    mats = {r["id"]: r for r in _rows(conn.execute("SELECT id, descricao, unidade, propriedade FROM materiais"))}
+    mats, palavras = indice or indice_materiais(conn)
     if not emitente_caesb(conn, nf):                  # tubo da Caesb só vem em nota da Caesb: nunca é sugerido para compra
         mats = {k: m for k, m in mats.items() if m["propriedade"] != "CAESB"}
-    cand = []
-    for m in mats.values():
-        ps = _palavras(m["descricao"])
-        cand.append((m["id"], {p for p in ps if not p.isdigit()}, {p for p in ps if p.isdigit()}))
+    cand = [(i, *palavras[i]) for i in mats]
     hist_cod, hist_desc = {}, {}
     for cod, desc, mid in conn.execute(
             """SELECT l.codigo, l.descricao, l.material_id FROM nf_linhas l JOIN notas_fiscais n ON n.id=l.nf_id
@@ -959,14 +968,15 @@ def notas_a_receber(conn):
     """O que o almoxarife tem a fazer com as notas (tela Estoque e movimentos): a conferir (com o material sugerido em cada
     linha e os pedidos emitidos do emitente), a receber (o que falta chegar), em quarentena (por entrega) e, da nota sem
     pedido, a aprovação que falta."""
-    out = []
+    out, indice = [], None
     for n in _rows(conn.execute("""SELECT * FROM notas_fiscais WHERE origem<>'DIRETA' AND (status IN ('A_CONFERIR','CONFERIDA')
                                      OR (sem_pedido=1 AND aprovada_em IS NULL AND status<>'CANCELADA')) ORDER BY id DESC LIMIT 100""")):
         if n["status"] not in ("A_CONFERIR", "CONFERIDA") and _aguarda_na_nota(conn, n["id"]) <= TOL:
             continue                                  # sem pedido, não aprovada e já toda devolvida: nada mais a fazer
         n["linhas"] = _rows(conn.execute("SELECT * FROM nf_linhas WHERE nf_id=? ORDER BY n_item", (n["id"],)))
         if n["status"] == "A_CONFERIR":
-            n["sugestoes"] = sugerir_materiais(conn, n["id"])
+            indice = indice or indice_materiais(conn)
+            n["sugestoes"] = sugerir_materiais(conn, n["id"], indice)
             n["pedidos"] = [{"id": p["id"], "numero": p["numero"]} for p in _rows(conn.execute(
                 "SELECT id, numero FROM pedidos_compra WHERE fornecedor_id=? AND status='EMITIDO' ORDER BY id", (n["fornecedor_id"],)))]
         n["itens"] = _rows(conn.execute(

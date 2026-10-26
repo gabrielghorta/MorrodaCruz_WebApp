@@ -16,6 +16,7 @@ import apropriacao as AP  # noqa: E402
 import exportar  # noqa: E402
 import medicao as M  # noqa: E402
 import regras as R  # noqa: E402
+import server  # noqa: E402
 import servicos as S  # noqa: E402
 from fotos_teste import jpeg  # noqa: E402
 from test_acesso import BaseHTTP  # noqa: E402
@@ -266,6 +267,9 @@ class TestMedicaoPeloHTTP(BaseHTTP):
         self.assertEqual(self.q("SELECT por FROM conferencias_medicao"), [("eng2",)])        # autor = sessão, não o digitado
         st, m = eng.get(f"/api/medicao?id={mid}")
         self.assertTrue(m["conferencia"]["vale"])
+        lanc = [l for g in m["gavetas"].values() for l in g["lancamentos"]]           # só o que a tela usa de cada um
+        self.assertTrue(lanc)
+        self.assertEqual({k for l in lanc for k in l}, set(server._CAMPOS_LANCAMENTO))
         self.assertTrue(any(r["decisao"] == "D-56" for r in m["regras"]))
         self.assertEqual(m["roteiro_conferencia"], dict(R.CHECKLIST_CONFERENCIA_MEDICAO))
         st, el = eng.get(f"/api/medicao/elegibilidade?id={mid}")
