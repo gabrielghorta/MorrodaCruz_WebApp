@@ -13,10 +13,10 @@ from unittest import mock
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import acesso as A  # noqa: E402
-import caminhos  # noqa: E402
-import link  # noqa: E402
-import server  # noqa: E402
+from morrodacruz.nucleo import acesso as A  # noqa: E402
+from morrodacruz.nucleo import caminhos  # noqa: E402
+from morrodacruz.integracoes import link  # noqa: E402
+from morrodacruz.servidor import server  # noqa: E402
 from test_acesso import SENHA, BaseHTTP  # noqa: E402
 
 TUNEL = {"Cf-Connecting-Ip": "200.1.2.3", "X-Forwarded-For": "200.1.2.3", "X-Forwarded-Proto": "https"}

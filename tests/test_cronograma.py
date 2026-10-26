@@ -13,8 +13,8 @@ from openpyxl import Workbook
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import cronograma as CR  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.obra import cronograma as CR  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from test_acesso import TR, BaseHTTP  # noqa: E402
 
 TR2, MND = "Zona01_PB01_Rede_TR002", "Zona02_PB04_Rede_TR036"

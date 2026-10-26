@@ -9,7 +9,7 @@ import unittest
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import ns_leitura as L  # noqa: E402
+from morrodacruz.execucao import ns_leitura as L  # noqa: E402
 import ns_sintetica as NS  # noqa: E402
 
 OBRA = 'CT 10239/2026 Caesb × Ankara'

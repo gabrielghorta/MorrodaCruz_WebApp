@@ -9,10 +9,10 @@ from datetime import datetime
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import dados_obra as DO  # noqa: E402
-import planejamento as P  # noqa: E402
-import relogio as RL  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.obra import dados_obra as DO  # noqa: E402
+from morrodacruz.obra import planejamento as P  # noqa: E402
+from morrodacruz.nucleo import relogio as RL  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from test_dados_obra import TR2, BaseDadosObra  # noqa: E402
 
 NOITE_UTC = datetime(2026, 11, 4, 1, 30)           # 22:30 de 03/11 em Brasília (longe do dia real do teste)

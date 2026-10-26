@@ -9,9 +9,9 @@ import urllib.error
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import documentos as D  # noqa: E402
-import importacao as I  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.integracoes import documentos as D  # noqa: E402
+from morrodacruz.carga import importacao as I  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from test_acesso import BaseHTTP  # noqa: E402
 
 ARQ = "https://drive.google.com/file/d/1Arquivo061Ficticio0000000000000/view?usp=drivesdk"

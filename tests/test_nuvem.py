@@ -23,11 +23,11 @@ from wsgiref.validate import validator
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(AQUI)
 sys.path.insert(0, RAIZ)
-import acesso as A  # noqa: E402
-import importacao as I  # noqa: E402
-import nuvem  # noqa: E402
-import server  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.nucleo import acesso as A  # noqa: E402
+from morrodacruz.carga import importacao as I  # noqa: E402
+from morrodacruz.servidor import nuvem  # noqa: E402
+from morrodacruz.servidor import server  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 
 CFG = I.carregar_config()
 TEM_DADOS = all(I.caminho(CFG, k) for k in ("redes", "conexoes", "evidencias", "bm", "reajuste"))

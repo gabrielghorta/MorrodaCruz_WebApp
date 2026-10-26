@@ -10,11 +10,11 @@ import unittest
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import backup  # noqa: E402
-import compras as C  # noqa: E402
-import nfe  # noqa: E402
+from morrodacruz.nucleo import backup  # noqa: E402
+from morrodacruz.almoxarifado import compras as C  # noqa: E402
+from morrodacruz.almoxarifado import nfe  # noqa: E402
 import nfe_teste as NT  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from fotos_teste import jpeg  # noqa: E402
 from test_acesso import BaseHTTP  # noqa: E402
 from test_importacao import Base  # noqa: E402

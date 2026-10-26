@@ -11,11 +11,11 @@ from datetime import timedelta
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import dados_obra as DO  # noqa: E402
-import notas_servico as NS  # noqa: E402
+from morrodacruz.obra import dados_obra as DO  # noqa: E402
+from morrodacruz.execucao import notas_servico as NS  # noqa: E402
 import ns_sintetica as NSS  # noqa: E402
-import relogio as RL  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.nucleo import relogio as RL  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from base_real import TR006, BaseReal, b64, data_ns  # noqa: E402
 
 HOJE = RL.hoje()

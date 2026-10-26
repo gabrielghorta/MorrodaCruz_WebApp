@@ -13,17 +13,18 @@ import unittest
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import notas_servico as NS  # noqa: E402
+from morrodacruz.execucao import notas_servico as NS  # noqa: E402
+from morrodacruz.nucleo import caminhos  # noqa: E402
 import ns_sintetica as NSS  # noqa: E402
-import nuvem  # noqa: E402
-import server  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.servidor import nuvem  # noqa: E402
+from morrodacruz.servidor import server  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from base_real import TR006, TR007, TR020, BaseReal, b64, pdf_grupo, pdf_ns  # noqa: E402
 from test_importacao import Base  # noqa: E402
 
 
 def _ddl(tabela, trocas=()):
-    with open(os.path.join(os.path.dirname(AQUI), "schema.sql"), encoding="utf-8") as f:
+    with open(caminhos.SCHEMA, encoding="utf-8") as f:
         ddl = re.search(rf"CREATE TABLE IF NOT EXISTS {tabela} \(.*?\n\);", f.read(), re.S).group(0)
     for velho, novo in trocas:
         assert velho in ddl, velho
@@ -212,7 +213,7 @@ class TestRevisao(BaseReal):
     def test_adutora_tem_zona_e_pb(self):
         self.assertEqual(NS._zona_pb("ADUTORA_PB03_Adutora_TR001"), ("ADUTORA", "PB03"))
         self.assertEqual(NS._norm_zona_pb("adutora", "3"), ("ADUTORA", "PB03"))
-        from ns_leitura import contexto_zona_pb
+        from morrodacruz.execucao.ns_leitura import contexto_zona_pb
         self.assertEqual(contexto_zona_pb('"ADUTORA" - PB03 - VER CROQUI'), {"zona": "ADUTORA", "pb": "PB03"})
 
 

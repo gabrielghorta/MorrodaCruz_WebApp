@@ -1,7 +1,7 @@
 """NF-e de TESTE (estrutura do leiaute 4.00, sem assinatura real): chave com dígito verificador válido."""
 import base64
 
-import nfe
+from morrodacruz.almoxarifado import nfe
 
 CNPJ_FORNECEDOR = "11222333000181"           # CNPJ fictício com dígitos verificadores válidos
 

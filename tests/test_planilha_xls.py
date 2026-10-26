@@ -10,9 +10,9 @@ from datetime import datetime
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import compras as C  # noqa: E402
+from morrodacruz.almoxarifado import compras as C  # noqa: E402
 import ns_sintetica as NS  # noqa: E402
-import planilha_xls as X  # noqa: E402
+from morrodacruz.carga import planilha_xls as X  # noqa: E402
 
 CELULAS = {(0, 0): ('NS nº :', 'General'), (0, 1): (12, '0'), (1, 0): ('Ação — VRP', 'General'), (1, 1): (2.5, '0.00'),
            (1, 2): (-7, '0'), (1, 3): (1234.567891, '#,##0.000'), (2, 0): (datetime(2026, 10, 15), 'dd/mm/yyyy'),

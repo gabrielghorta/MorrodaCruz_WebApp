@@ -14,12 +14,12 @@ from datetime import timedelta
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import dados_obra as DO  # noqa: E402
-import planejamento as P  # noqa: E402
-import relogio as RL  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.obra import dados_obra as DO  # noqa: E402
+from morrodacruz.obra import planejamento as P  # noqa: E402
+from morrodacruz.nucleo import relogio as RL  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 import test_importacao as TI  # noqa: E402
-import topologia as TP  # noqa: E402
+from morrodacruz.execucao import topologia as TP  # noqa: E402
 from test_acesso import TR, BaseHTTP  # noqa: E402
 
 TR2, TR3 = "Zona01_PB01_Rede_TR002", "Zona01_PB01_Rede_TR003"

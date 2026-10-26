@@ -4,9 +4,10 @@
 a = Analysis(
     ["iniciar.py"],
     pathex=["."],
-    datas=[("web", "web"), ("schema.sql", "."), ("config", "config"),
+    datas=[("web", "web"), ("morrodacruz/nucleo/schema.sql", "morrodacruz/nucleo"), ("config", "config"),
            ("planilhas/LEIA-ME.md", "planilhas"), ("mapa/LEIA-ME.md", "mapa")],
-    hiddenimports=["server", "demo", "importar", "usuarios", "backup"],
+    hiddenimports=["morrodacruz.servidor.server", "morrodacruz.servidor.demo", "morrodacruz.carga.importar",
+                   "morrodacruz.servidor.usuarios", "morrodacruz.nucleo.backup"],
     excludes=["tkinter", "unittest", "pydoc"],
 )
 pyz = PYZ(a.pure)

@@ -22,13 +22,13 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.dirname(AQUI)
 sys.path.insert(0, APP)
 sys.path.insert(0, AQUI)
-import backup  # noqa: E402
-import importacao as I  # noqa: E402
-import importar  # noqa: E402
-import medicao as M  # noqa: E402
+from morrodacruz.nucleo import backup  # noqa: E402
+from morrodacruz.carga import importacao as I  # noqa: E402
+from morrodacruz.carga import importar  # noqa: E402
+from morrodacruz.faturamento import medicao as M  # noqa: E402
 import planilhas_sinteticas as PS  # noqa: E402
-import regras as R  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.nucleo import regras as R  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from fotos_teste import jpeg  # noqa: E402
 
 D = "2026-10-15"

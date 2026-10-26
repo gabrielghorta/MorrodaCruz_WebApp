@@ -9,9 +9,9 @@ import unittest
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import importacao as I  # noqa: E402
-import regras as R  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.carga import importacao as I  # noqa: E402
+from morrodacruz.nucleo import regras as R  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from test_acesso import D, TR, BaseHTTP  # noqa: E402
 
 D2 = "2026-10-16"

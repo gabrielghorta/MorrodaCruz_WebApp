@@ -17,12 +17,12 @@ from http.server import ThreadingHTTPServer
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import acesso as A  # noqa: E402
-import importacao as I  # noqa: E402
-import importar  # noqa: E402
+from morrodacruz.nucleo import acesso as A  # noqa: E402
+from morrodacruz.carga import importacao as I  # noqa: E402
+from morrodacruz.carga import importar  # noqa: E402
 import ns_sintetica as NSS  # noqa: E402
-import server  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.servidor import server  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from perfil_teste import cfg_teste_real  # noqa: E402
 from test_acesso import SENHA, Cliente  # noqa: E402
 from test_importacao import liberar_tudo  # noqa: E402

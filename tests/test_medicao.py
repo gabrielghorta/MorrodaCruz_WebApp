@@ -12,12 +12,12 @@ from openpyxl import load_workbook
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import apropriacao as AP  # noqa: E402
-import exportar  # noqa: E402
-import medicao as M  # noqa: E402
-import regras as R  # noqa: E402
-import server  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.faturamento import apropriacao as AP  # noqa: E402
+from morrodacruz.faturamento import exportar  # noqa: E402
+from morrodacruz.faturamento import medicao as M  # noqa: E402
+from morrodacruz.nucleo import regras as R  # noqa: E402
+from morrodacruz.servidor import server  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from fotos_teste import jpeg  # noqa: E402
 from test_acesso import BaseHTTP  # noqa: E402
 from test_campo import TR, BaseCampo, D  # noqa: E402

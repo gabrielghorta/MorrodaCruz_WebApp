@@ -24,8 +24,8 @@ for _p in (APP, os.path.join(APP, "tests")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import mapa_geral as MG  # noqa: E402
-import topologia as TP  # noqa: E402
+from morrodacruz.obra import mapa_geral as MG  # noqa: E402
+from morrodacruz.execucao import topologia as TP  # noqa: E402
 
 SAIDA = os.path.join(AQUI, "saida")
 SEM_NO = MG.SEM_NO                       # texto da 06.1 → tipo de junção
@@ -50,8 +50,8 @@ def caminho_mapa():
 
 def montar_banco(pasta=None):
     """Banco novo a partir das planilhas do repositório (planilhas/), numa pasta temporária. Devolve o caminho."""
-    import importacao as I
-    import importar
+    from morrodacruz.carga import importacao as I
+    from morrodacruz.carga import importar
     from perfil_teste import cfg_teste_real
     pasta = pasta or tempfile.mkdtemp(prefix="topologia_")
     db = os.path.join(pasta, "obra.db")

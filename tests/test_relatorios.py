@@ -10,10 +10,10 @@ from openpyxl import load_workbook
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import compras as C  # noqa: E402
-import planejamento as P  # noqa: E402
-import relatorios as RL  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.almoxarifado import compras as C  # noqa: E402
+from morrodacruz.obra import planejamento as P  # noqa: E402
+from morrodacruz.obra import relatorios as RL  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from test_acesso import BaseHTTP  # noqa: E402
 from test_campo import TR, BaseCampo, D  # noqa: E402
 from test_compras import MAT, BaseCompras  # noqa: E402

@@ -12,13 +12,13 @@ from datetime import timedelta
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import apropriacao as AP  # noqa: E402
+from morrodacruz.faturamento import apropriacao as AP  # noqa: E402
 import fotos_teste as FT  # noqa: E402
-import lev as LV  # noqa: E402
-import medicao as M  # noqa: E402
-import regras as R  # noqa: E402
-import relogio as RL  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.obra import lev as LV  # noqa: E402
+from morrodacruz.faturamento import medicao as M  # noqa: E402
+from morrodacruz.nucleo import regras as R  # noqa: E402
+from morrodacruz.nucleo import relogio as RL  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from base_real import BaseReal, b64  # noqa: E402
 from test_importacao import Base  # noqa: E402
 from test_notas_servico import _ddl  # noqa: E402

@@ -15,7 +15,7 @@ import unittest
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import servicos as S  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from test_importacao import Base  # noqa: E402
 
 TUBO = "CAESB-PEAD-DE63"

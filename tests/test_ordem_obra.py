@@ -9,7 +9,7 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
 import ns_sintetica as NSS  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from base_real import TR006, TR020, BaseReal, b64, pdf_ns  # noqa: E402
 from test_ns_dia import BaseDia, grupo, pdf_dia  # noqa: E402
 

@@ -6,8 +6,8 @@ import unittest
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import planejamento as P  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.obra import planejamento as P  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from test_acesso import BaseHTTP  # noqa: E402
 from test_campo import TR, BaseCampo, D  # noqa: E402
 

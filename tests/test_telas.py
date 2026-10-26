@@ -12,10 +12,10 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(AQUI)
 sys.path.insert(0, RAIZ)
 sys.path.insert(0, AQUI)
-import mapa_geral as MG  # noqa: E402
-import planejamento as P  # noqa: E402
-import server  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.obra import mapa_geral as MG  # noqa: E402
+from morrodacruz.obra import planejamento as P  # noqa: E402
+from morrodacruz.servidor import server  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from test_acesso import BaseHTTP  # noqa: E402
 
 WEB = os.path.join(RAIZ, "web")

@@ -23,11 +23,11 @@ APP = os.path.dirname(AQUI)
 sys.path.insert(0, APP)
 sys.path.insert(0, AQUI)
 sys.path.insert(0, os.path.join(APP, "ferramentas", "topologia"))
-import importacao as I  # noqa: E402
-import importar  # noqa: E402
-import mapa_geral as MG  # noqa: E402
-import server  # noqa: E402
-import topologia as TP  # noqa: E402
+from morrodacruz.carga import importacao as I  # noqa: E402
+from morrodacruz.carga import importar  # noqa: E402
+from morrodacruz.obra import mapa_geral as MG  # noqa: E402
+from morrodacruz.servidor import server  # noqa: E402
+from morrodacruz.execucao import topologia as TP  # noqa: E402
 from perfil_teste import cfg_teste_real  # noqa: E402
 
 MAPA = server._mapa_path()

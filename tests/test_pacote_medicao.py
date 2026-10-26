@@ -19,11 +19,11 @@ from openpyxl import load_workbook
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import medicao as MD  # noqa: E402
-import pacote_medicao as PM  # noqa: E402
-import regras as R  # noqa: E402
-import servicos as S  # noqa: E402
-import xlsx_modelo as X  # noqa: E402
+from morrodacruz.faturamento import medicao as MD  # noqa: E402
+from morrodacruz.faturamento import pacote_medicao as PM  # noqa: E402
+from morrodacruz.nucleo import regras as R  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
+from morrodacruz.faturamento import xlsx_modelo as X  # noqa: E402
 from base_real import BaseReal  # noqa: E402
 from fotos_teste import jpeg  # noqa: E402
 

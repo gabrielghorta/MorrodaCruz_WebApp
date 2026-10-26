@@ -7,7 +7,7 @@ import unittest
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import server  # noqa: E402
+from morrodacruz.servidor import server  # noqa: E402
 from test_acesso import D, TR, BaseHTTP  # noqa: E402
 
 INTERF = {"alvo_tipo": "TRECHO", "alvo_id": TR, "tipo": "IMPEDIMENTO", "categoria": "INTERFERENCIA",

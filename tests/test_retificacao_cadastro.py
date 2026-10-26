@@ -12,8 +12,8 @@ from unittest import mock
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import regras as R  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.nucleo import regras as R  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from fotos_teste import jpeg  # noqa: E402
 from test_campo import TR, TR_ID, BaseCampo, D, banco_legado  # noqa: E402
 from test_importacao import Base  # noqa: E402

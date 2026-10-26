@@ -16,8 +16,8 @@ import unittest
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import backup  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.nucleo import backup  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from fotos_teste import jpeg  # noqa: E402
 from test_importacao import Base  # noqa: E402
 
@@ -423,7 +423,7 @@ class TestF05ImagemValida(BaseCampo):
         self.assertEqual(S.fotos_faltando(self.c, "TRECHO", TR), [])
 
     def test_sem_pillow_a_validacao_estrutural_continua_recusando(self):
-        import imagens
+        from morrodacruz.nucleo import imagens
         from fotos_teste import jpeg_bytes
         pil = imagens._PIL
         imagens._PIL = None
@@ -473,7 +473,7 @@ class TestMigracaoV6ParaV7(Base):
         self.assertEqual(self.q("SELECT id, etapa, ini_m, fim_m, origem FROM intervalos_execucao"),
                          [(1, "ASSENTADO", 0.0, 10.0, "SEQUENCIAL")])                     # copiado sem perda
         self.assertEqual(dict(self.q("SELECT arquivo, validacao FROM fotos")),
-                         {"boa.jpg": "DECODIFICADA (Pillow)" if __import__("imagens")._PIL else "ESTRUTURAL (JPEG, sem Pillow)",
+                         {"boa.jpg": "DECODIFICADA (Pillow)" if __import__("morrodacruz.nucleo.imagens", fromlist=["_PIL"])._PIL else "ESTRUTURAL (JPEG, sem Pillow)",
                           "ruim.jpg": "INVALIDA", "sumiu.jpg": "ARQUIVO_AUSENTE"})
         c2 = self.conectar()
         self.assertEqual(S.fotos_faltando(c2, "TRECHO", TR), ["EXECUCAO", "CONCLUIDO"])      # inválida/ausente não contam

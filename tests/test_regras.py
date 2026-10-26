@@ -3,7 +3,7 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import regras as R  # noqa: E402
+from morrodacruz.nucleo import regras as R  # noqa: E402
 
 
 class TestUnidades(unittest.TestCase):

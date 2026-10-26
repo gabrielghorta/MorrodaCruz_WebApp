@@ -9,7 +9,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import importacao as I  # noqa: E402
+from morrodacruz.carga import importacao as I  # noqa: E402
 
 
 def cfg_teste_real():

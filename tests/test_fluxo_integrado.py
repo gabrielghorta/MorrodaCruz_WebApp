@@ -10,12 +10,12 @@ from datetime import date
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
 sys.path.insert(0, AQUI)
-import compras as C  # noqa: E402
+from morrodacruz.almoxarifado import compras as C  # noqa: E402
 import nfe_teste as NT  # noqa: E402
 import ns_sintetica as NSS  # noqa: E402
-import relogio as RL  # noqa: E402
-import regras as R  # noqa: E402
-import servicos as S  # noqa: E402
+from morrodacruz.nucleo import relogio as RL  # noqa: E402
+from morrodacruz.nucleo import regras as R  # noqa: E402
+from morrodacruz.nucleo import servicos as S  # noqa: E402
 from base_real import TR006, TR007, TR020, BaseReal, b64, data_ns, pdf_ns  # noqa: E402
 from fotos_teste import jpeg  # noqa: E402
 from test_ns_dia import grupo, pdf_dia  # noqa: E402
