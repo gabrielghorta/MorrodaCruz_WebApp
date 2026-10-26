@@ -17,6 +17,32 @@ São Sebastião/DF*, Contrato Caesb × Ankara nº 10239/2026, LC 014/2026.
   - Etapa 4, campo e cadastro (intervalos por etapa, retificação, conciliação do legado, levantamento de campo, conferência interna do cadastro, soldas verificadas, foto original com hash): `docs/ETAPA_4_CAMPO.md`.
   - Módulos do plano: acesso e auditoria `docs/MODULO_A_ACESSO.md`; campo `docs/MODULO_B_CAMPO.md`; compras e recebimento `docs/MODULO_C_COMPRAS.md`; planejamento e mapa `docs/MODULO_D_PLANEJAMENTO.md`; medição (parcela única, elegibilidade, conferência antes do fechamento, regras bloqueadas) `docs/MODULO_E_MEDICAO.md`; relatórios e operação `docs/MODULO_F_RELATORIOS.md`.
 
+## Estrutura do projeto
+
+```
+projeto_morrodacruz_webapp/
+├── server.py, nuvem.py, iniciar.py,   entradas: o que se digita (python server.py, python importar.py --aplicar…);
+│   importar.py, usuarios.py, backup.py, cada uma tem poucas linhas e chama o módulo do pacote
+│   demo.py, montar_pacote_obra.py
+├── morrodacruz/                       o código do sistema, por área
+│   ├── nucleo/        caminhos, relógio, regras de negócio, casos de uso sobre o banco (servicos), acesso, imagens,
+│   │                  backup e o schema.sql
+│   ├── carga/         importação das planilhas oficiais (simulação e aplicação) e leitor do .xls
+│   ├── execucao/      nota de serviço (leitura e registro), diário, terceirizadas, trecho físico (topologia)
+│   ├── obra/          planejamento das equipes, Dados da obra, cronograma, LEV, mapa geral, relatórios
+│   ├── almoxarifado/  compras, recebimento, almoxarifado, NF-e
+│   ├── faturamento/   medição, apropriação direta, pacote no modelo oficial do BM, exportação, edição do .xlsx
+│   ├── integracoes/   Google Drive, catálogo de documentos, link https para a equipe
+│   └── servidor/      servidor HTTP, nuvem (WSGI), programa do Windows, usuários, demonstração, pacote da obra
+├── web/                               a interface (HTML, JS e CSS, sem framework)
+├── config/                            configuração da obra (fontes, controles, perfis, serviços, topologia…)
+├── planilhas/, mapa/                  as planilhas oficiais e o HTML REV02 (versionados, D-60)
+├── tests/                             a suíte (python -m unittest discover -s tests)
+├── docs/                              decisões (DECISOES_PENDENTES.md), módulos, implantação, nuvem
+├── ferramentas/                       diagnóstico da topologia, protótipos da NS, medição de desempenho do mapa
+└── dados/, dados_demo/                banco, fotos e documentos da obra (fora do Git)
+```
+
 ## Site para a equipe: um link, a partir do computador do escritório (Windows)
 
 1. Baixe `MorroDaCruz-Windows.zip` em **Releases** do repositório (versão mais recente) e descompacte numa pasta. Ele já traz as planilhas, o mapa e o túnel (cloudflared).
@@ -26,12 +52,12 @@ São Sebastião/DF*, Contrato Caesb × Ankara nº 10239/2026, LC 014/2026.
 
 Não precisa instalar o Python nem criar conta em lugar nenhum. O link vale enquanto o programa estiver aberto e muda a cada reinício. O link atual fica na janela do programa, em `LINK_DA_EQUIPE.txt` e no botão "Link da equipe" do sistema. Os dados ficam na pasta do programa (`dados_demo/`).
 
-O executável é gerado e testado no Windows pelo GitHub Actions (`.github/workflows/morro-da-cruz-windows.yml`). Para gerar à mão: `python -m PyInstaller MorroDaCruz.spec`. Sem o executável, `ABRIR_SISTEMA.bat` faz o mesmo usando o Python instalado.
+O executável é gerado e testado no Windows pelo GitHub Actions (`.github/workflows/windows.yml`). Para gerar à mão: `python -m PyInstaller MorroDaCruz.spec`. Sem o executável, `ABRIR_SISTEMA.bat` faz o mesmo usando o Python instalado.
 
 ## Testar no seu computador pelo código (demonstração, sem tocar no banco oficial)
 
 1. Instale o Python 3.11+ (no Windows, marque "Add python.exe to PATH") e rode `pip install openpyxl pillow "pypdf>=6,<7"`.
-2. Baixe esta branch (`claude/powerbi-modifications-wqxekj`) e entre na pasta `morro-da-cruz`.
+2. Clone este repositório (`git clone https://github.com/gabrielghorta/projeto_morrodacruz_webapp.git`) e entre na pasta dele.
 3. Copie as 5 planilhas oficiais para `planilhas/` e o HTML do mapa REV02 para `mapa/` (nomes em `planilhas/LEIA-ME.md` e `mapa/LEIA-ME.md`).
 4. Rode `python demo.py` e abra **http://127.0.0.1:8765**. Entre com `eng.demo` e a senha `demo-morro-123` (outros perfis: o comando lista).
    - O banco de demonstração fica em `dados_demo/`, separado de `dados/`. Ele é importado com o perfil de controles TESTE; a aprovação real (D-01) continua pendente.

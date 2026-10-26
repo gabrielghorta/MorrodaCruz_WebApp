@@ -35,8 +35,17 @@ Os limites acima foram conferidos nas páginas públicas em 18/10/2026: [PythonA
 2. Crie o site: abra **Web** → **Add a new web app** → **Next** → **Manual configuration** → **Python 3.13** (ou a mais nova da lista) → **Next**.
 3. Abra **Consoles** → **Bash** e cole este comando (é uma linha só):
    ```
-   [ -d ~/Projeto-Pessoal ] || git clone -b claude/powerbi-modifications-wqxekj --depth 1 https://github.com/gabrielghorta/Projeto-Pessoal.git ~/Projeto-Pessoal; bash ~/Projeto-Pessoal/morro-da-cruz/instalar_pythonanywhere.sh
+   [ -d ~/projeto_morrodacruz_webapp ] || git clone --depth 1 https://github.com/gabrielghorta/projeto_morrodacruz_webapp.git ~/projeto_morrodacruz_webapp; bash ~/projeto_morrodacruz_webapp/instalar_pythonanywhere.sh
    ```
+   **Repositório privado:** o `git clone` pede usuário e senha. O usuário é o seu do GitHub; a senha é um token, não a
+   senha da conta: no GitHub, **Settings → Developer settings → Personal access tokens → Fine-grained tokens →
+   Generate new token**, só com este repositório e **Contents: Read-only**. Para o console não pedir de novo a cada
+   atualização, rode antes `git config --global credential.helper store` (o token fica guardado na sua conta do
+   PythonAnywhere).
+
+   **Quem já tinha o sistema instalado pelo repositório antigo** (`~/Projeto-Pessoal/morro-da-cruz`): o instalador
+   copia `dados_demo/` e `dados/` de lá na primeira vez (o banco pela cópia do próprio SQLite), aponta o site para a
+   pasta nova e recarrega. A pasta antiga fica como está; apague-a só depois de conferir o site novo.
    O comando:
    - baixa o código;
    - monta a obra a partir das planilhas (menos de 1 minuto);
@@ -47,12 +56,12 @@ Os limites acima foram conferidos nas páginas públicas em 18/10/2026: [PythonA
 
 **Depois:**
 - Uma vez por mês, abra **Web** e clique em **Run until 1 month from today**. O PythonAnywhere manda e-mail antes de desligar.
-- Para receber uma versão nova do sistema, cole de novo o comando do passo 3. Os dados não são apagados: ficam em `morro-da-cruz/dados_demo`, fora do Git.
+- Para receber uma versão nova do sistema, cole de novo o comando do passo 3. Os dados não são apagados: ficam em `~/projeto_morrodacruz_webapp/dados_demo`, fora do Git.
 
 ## 2. Render (pago, sem manutenção)
 
 1. Crie a conta em https://render.com, entrando com o GitHub. Cadastre o cartão em **Billing**.
-2. Clique em **New** → **Blueprint**, escolha o repositório **Projeto-Pessoal** e a branch `claude/powerbi-modifications-wqxekj`. O Render lê o `render.yaml`, que fica na raiz do repositório.
+2. Clique em **New** → **Blueprint**, escolha o repositório **projeto_morrodacruz_webapp** e a branch `main`. Se ele não aparecer na lista (repositório privado), clique em **Configure GitHub** e dê ao Render acesso a ele. O Render lê o `render.yaml`, que fica na raiz do repositório.
 3. Ele pede três valores. Preencha:
    - `MC_ADMIN_LOGIN`: o seu login, por exemplo `gabriel.horta`;
    - `MC_ADMIN_NOME`: o seu nome;
@@ -60,7 +69,7 @@ Os limites acima foram conferidos nas páginas públicas em 18/10/2026: [PythonA
 4. Clique em **Apply**. Em poucos minutos o link aparece no topo da página do serviço (`https://….onrender.com`).
 5. Entre com o seu login. Troque a senha em **Trocar senha**, porque a do passo 3 fica visível para quem acessa a conta do Render. Depois cadastre a equipe em Administrativo › Usuários e histórico.
 
-**Depois:** cada envio ao GitHub que mexe na pasta `morro-da-cruz/` publica sozinho a versão nova. Se a versão nova não subir, o Render mantém a anterior no ar.
+**Depois:** cada envio ao ramo `main` publica sozinho a versão nova. Se a versão nova não subir, o Render mantém a anterior no ar.
 
 ## 3. Como funciona e o que continua valendo
 
@@ -87,7 +96,7 @@ Os limites acima foram conferidos nas páginas públicas em 18/10/2026: [PythonA
   - o disco tem cópia diária automática da própria hospedagem;
   - além disso, pelo **Shell** do serviço: `python backup.py criar --db /var/data/dados_demo/obra.db --destino /var/data/backups`.
 - **PythonAnywhere:**
-  - no console Bash: `cd ~/Projeto-Pessoal/morro-da-cruz && python3.13 backup.py criar --db dados_demo/obra.db --destino dados_demo/backups`;
+  - no console Bash: `cd ~/projeto_morrodacruz_webapp && python3.13 backup.py criar --db dados_demo/obra.db --destino dados_demo/backups`;
   - baixe a pasta do backup em **Files** uma vez por semana;
   - cada backup ocupa espaço dos 512 MB.
 

@@ -27,7 +27,8 @@ Este é o procedimento para pôr o sistema em uso no computador da obra, operá-
 ## 2. Pastas
 
 ```
-morro-da-cruz/
+projeto_morrodacruz_webapp/
+  morrodacruz/      o código do sistema, por área (veja a estrutura no README)
   planilhas/        planilhas oficiais (nomes em config/fontes.json) — NUNCA são alteradas pelo sistema
   mapa/             HTML REV02 do mapa — não é alterado
   config/           controles (aprovação sua), perfis, serviços × BM, decisões, de-para de conciliação
@@ -128,7 +129,7 @@ python backup.py verificar dados/backups/<pasta>
 2. Uma cópia semanal da pasta `dados/backups/<mais recente>` para um disco externo ou nuvem privada da Ankara, fora do computador da obra.
 3. Antes de importar uma revisão ou atualizar o sistema, o próprio `importar.py --aplicar` faz backup verificado.
 
-**Agendamento no Windows** (não ensaiado): no Agendador de Tarefas, crie uma ação diária `python C:\obra\morro-da-cruz\backup.py criar`, com "Iniciar em" = pasta do sistema. Confira o resultado com `verificar` na primeira semana.
+**Agendamento no Windows** (não ensaiado): no Agendador de Tarefas, crie uma ação diária `python C:\obra\projeto_morrodacruz_webapp\backup.py criar`, com "Iniciar em" = pasta do sistema. Confira o resultado com `verificar` na primeira semana.
 
 **Retenção:** nada é apagado automaticamente. Apague backups antigos manualmente, mantendo ao menos os 7 últimos diários e 4 semanais.
 

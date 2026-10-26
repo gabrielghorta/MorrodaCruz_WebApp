@@ -5,13 +5,14 @@ description: Lógica completa do sistema web de gestão da obra Morro da Cruz (A
 
 # Sistema Morro da Cruz — a obra, o contrato Caesb × Ankara e o web app
 
-Estado de 26/10/2026, esquema do banco **v21**, ramo do site `claude/powerbi-modifications-wqxekj` (repositório
-`gabrielghorta/Projeto-Pessoal`, pasta `morro-da-cruz/`). Último PR desta fase: medição no modelo oficial do BM.
+Estado de 26/10/2026, esquema do banco **v21**, repositório `gabrielghorta/projeto_morrodacruz_webapp`, ramo `main`
+(o sistema saiu do repositório pessoal `Projeto-Pessoal`, onde ficava na pasta `morro-da-cruz/` do ramo
+`claude/powerbi-modifications-wqxekj`, com a história da pasta). O código fica no pacote `morrodacruz/`, por área.
 
 ## 0. Como usar este arquivo
 
 - É o mapa do sistema e das regras do negócio. **A fonte de verdade é o repositório:** `docs/DECISOES_PENDENTES.md`
-  (todas as decisões, D-01 a D-157), `docs/MODULO_*.md`, `docs/NOTAS_DE_SERVICO.md`, `docs/TOPOLOGIA_TRECHOS.md`,
+  (todas as decisões, D-01 a D-168), `docs/MODULO_*.md`, `docs/NOTAS_DE_SERVICO.md`, `docs/TOPOLOGIA_TRECHOS.md`,
   `docs/MATRIZ_REGIMES_FATURAMENTO.md`, `config/*.json` e o código. Se algo aqui divergir deles, vale o repositório, e
   este arquivo deve ser corrigido.
 - Decisão tem três situações: **DECIDIDA** (o responsável decidiu, com data), **PROVISÓRIA** (regra em uso, a
@@ -132,7 +133,7 @@ aberta (D-113: os lançamentos esperam em `SEM_MEDICAO_ABERTA` e entram quando a
 - **Python 3.11+ só com biblioteca padrão** + `openpyxl` (planilhas), `pypdf` (NS em PDF) e `pillow` (opcional:
   satélite, decodificação das fotos, galeria da medição). **Sem framework, sem dependência nova, sem CDN, sem
   biblioteca de mapa.** Interface HTML/CSS/JS puro (só fontes do Google Fonts, com fonte do sistema de reserva).
-- **Servidor** `server.py` (`http.server`, um processo, uma conexão SQLite, `LOCK`): cada gravação é **uma transação**
+- **Servidor** `morrodacruz/servidor/server.py` (`http.server`, um processo, uma conexão SQLite, `LOCK`): cada gravação é **uma transação**
   com permissão, restrição de equipe, autoria, reenvio e auditoria. Serviços aninhados viram `SAVEPOINT`
   (`servicos.transacao`); a externa usa `BEGIN IMMEDIATE`. Na recusa, tudo é desfeito e a auditoria da recusa é gravada
   fora da transação.
@@ -144,15 +145,15 @@ aberta (D-113: os lançamentos esperam em `SEM_MEDICAO_ABERTA` e entram quando a
   `SameSite=Strict` (e `Secure` + HSTS na nuvem); gravação exige o cabeçalho `X-MC` (CSRF); reenvio idempotente por
   `X-Idem` (por usuário); corpo acima de 32 MB recusado (413) sem ler; base64 de arquivos fora da auditoria; arquivos de
   NS servidos `inline` com `nosniff` e `Content-Security-Policy: sandbox`.
-- **Relógio:** `relogio.py` — hoje e agora de **Brasília** em todo o servidor (o PythonAnywhere roda em UTC; D-109).
+- **Relógio:** `nucleo/relogio.py` — hoje e agora de **Brasília** em todo o servidor (o PythonAnywhere roda em UTC; D-109).
   Data futura é recusada em tudo o que registra o que aconteceu (execução, clima, fotos, estoque, OK); programação,
   reserva e período de medição podem ser futuros.
 - **Hospedagem:** site no **PythonAnywhere** (grátis, 512 MB, um clique por mês para manter), instalado por
-  `instalar_pythonanywhere.sh` a partir do ramo do site; alternativa Render (pago, `render.yaml`); `nuvem.py` (modo
+  `instalar_pythonanywhere.sh` a partir do ramo `main` (clona em `~/projeto_morrodacruz_webapp`); alternativa Render (pago, `render.yaml`); `nuvem.py` (modo
   nuvem: nada é "o próprio computador"); no Windows, `MorroDaCruz.exe` (PyInstaller, `iniciar.py`) com link temporário
   pelo túnel da Cloudflare (`link.py`). Na nuvem o banco é o de **demonstração** (`dados_demo/`, faixa DEMONSTRAÇÃO)
   até a aprovação dos controles (D-01); o site migra o esquema sozinho ao recarregar, com backup verificado antes.
-- **Google Drive** (`drive.py`, v15/v16): fotos sobem para `03_EXECUCAO_DE_CAMPO/01_Fotos_por_Trecho/<Zona>/<trecho>`,
+- **Google Drive** (`integracoes/drive.py`, v15/v16): fotos sobem para `03_EXECUCAO_DE_CAMPO/01_Fotos_por_Trecho/<Zona>/<trecho>`,
   notas para `04_COMPRAS_E_ALMOXARIFADO/01_Notas_Fiscais/<AAAA-MM>`, NS para
   `03_EXECUCAO_DE_CAMPO/02_Notas_de_Servico/...`, apropriações para `03_Apropriacao_Direta/<AAAA-MM>`, base de custo em
   `05_MEDICAO/01_Base_de_Custo`. A foto original pode ficar só no Drive depois de conferida pelo MD5 (fica a miniatura
@@ -163,28 +164,33 @@ aberta (D-113: os lançamentos esperam em `SEM_MEDICAO_ABERTA` e entram quando a
 
 ### 5.1 Mapa do código
 
-| Arquivo | O que faz |
+Na raiz ficam só as **entradas** (`server.py`, `nuvem.py`, `iniciar.py`, `importar.py`, `usuarios.py`, `backup.py`,
+`demo.py`, `montar_pacote_obra.py`, e o `seed.py`, que só avisa que foi substituído): poucas linhas que chamam o módulo
+do pacote, para que os comandos, o WSGI (`from nuvem import application`) e o Render não mudem. O código fica em
+`morrodacruz/<área>/`; os imports são sempre absolutos (`from morrodacruz.nucleo import servicos as S`).
+
+| Arquivo (em `morrodacruz/`) | O que faz |
 |---|---|
-| `server.py` | Rotas, sessões, permissões, auditoria, downloads, injeção da camada no REV02 |
-| `servicos.py` | Casos de uso: alvos, almoxarifado, campo, fotos, OK interno, esteira, medição, resumo, congelamento |
-| `regras.py` | Regras puras (sem banco): BM (`totalizar_bm`, `produto_excel`), fotos, etapa no mapa, esteira, roteiros, reajuste |
-| `importacao.py` / `importar.py` | Importação idempotente com simulação, controles, proveniência e migrações `preparar_vNN` |
-| `acesso.py` / `usuarios.py` | Senha, sessão, permissão, auditoria, reenvio / terminal de usuários |
-| `notas_servico.py` / `ns_leitura.py` / `planilha_xls.py` | NS: casamento com o trecho físico, registro, NS do dia / leitor do PDF / leitor .xls (BIFF8) |
-| `topologia.py` | Trecho físico (cadeia de linhas da 06.1), `config/topologia.json` |
-| `terceirizadas.py` | Resumos da Topografia e do Cadastro de campo (feito × falta) |
-| `compras.py` / `nfe.py` | Compras, NF (XML e digitada), conferência, recebimento num toque, inspeção, inventário / leitor do XML da NF-e |
-| `dados_obra.py` / `planejamento.py` / `cronograma.py` | O dia da equipe no mapa / camadas e caminho da medição / MS Project |
-| `medicao.py` | Regras da medição, duplicidades, parcelas, elegibilidade, conferência interna |
-| `apropriacao.py` | Apropriação direta, base de custo, itens a aprovar, sincronização das restrições |
-| `pacote_medicao.py` / `xlsx_modelo.py` | Pacote mensal no modelo oficial do BM / edição de .xlsx por dentro (XML) |
-| `exportar.py` | Resumo interno da medição (.xlsx de conferência) |
-| `relatorios.py` / `diario.py` | Relatórios de operação / diário de obra e interferências |
-| `mapa_geral.py` | Visão geral do REV02 para o Mapa iluminado (satélite, zonas, traçado) |
-| `imagens.py` | Validação de imagem, miniatura |
-| `documentos.py` / `drive.py` | Documentos oficiais (links do Drive) / ligação com o Drive |
-| `backup.py` | Backup verificável e restauração |
-| `relogio.py`, `caminhos.py`, `nuvem.py`, `link.py`, `iniciar.py`, `demo.py` | Relógio, pastas, nuvem, túnel, executável, demonstração |
+| `servidor/server.py` | Rotas, sessões, permissões, auditoria, downloads, injeção da camada no REV02 |
+| `nucleo/servicos.py` | Casos de uso: alvos, almoxarifado, campo, fotos, OK interno, esteira, medição, resumo, congelamento |
+| `nucleo/regras.py` | Regras puras (sem banco): BM (`totalizar_bm`, `produto_excel`), fotos, etapa no mapa, esteira, roteiros, reajuste |
+| `carga/importacao.py` / `carga/importar.py` | Importação idempotente com simulação, controles, proveniência e migrações `preparar_vNN` |
+| `nucleo/acesso.py` / `servidor/usuarios.py` | Senha, sessão, permissão, auditoria, reenvio / terminal de usuários |
+| `execucao/notas_servico.py` / `execucao/ns_leitura.py` / `carga/planilha_xls.py` | NS: casamento com o trecho físico, registro, NS do dia / leitor do PDF / leitor .xls (BIFF8) |
+| `execucao/topologia.py` | Trecho físico (cadeia de linhas da 06.1), `config/topologia.json` |
+| `execucao/terceirizadas.py` | Resumos da Topografia e do Cadastro de campo (feito × falta) |
+| `almoxarifado/compras.py` / `almoxarifado/nfe.py` | Compras, NF (XML e digitada), conferência, recebimento num toque, inspeção, inventário / leitor do XML da NF-e |
+| `obra/dados_obra.py` / `obra/planejamento.py` / `obra/cronograma.py` | O dia da equipe no mapa / camadas e caminho da medição / MS Project |
+| `faturamento/medicao.py` | Regras da medição, duplicidades, parcelas, elegibilidade, conferência interna |
+| `faturamento/apropriacao.py` | Apropriação direta, base de custo, itens a aprovar, sincronização das restrições |
+| `faturamento/pacote_medicao.py` / `faturamento/xlsx_modelo.py` | Pacote mensal no modelo oficial do BM / edição de .xlsx por dentro (XML) |
+| `faturamento/exportar.py` | Resumo interno da medição (.xlsx de conferência) |
+| `obra/relatorios.py` / `execucao/diario.py` | Relatórios de operação / diário de obra e interferências |
+| `obra/mapa_geral.py`, `obra/lev.py` | Visão geral do REV02 para o Mapa iluminado (satélite, zonas, traçado) / LEV |
+| `nucleo/imagens.py` | Validação de imagem, miniatura |
+| `integracoes/documentos.py` / `integracoes/drive.py` | Documentos oficiais (links do Drive) / ligação com o Drive |
+| `nucleo/backup.py` | Backup verificável e restauração |
+| `nucleo/relogio.py`, `nucleo/caminhos.py`, `servidor/nuvem.py`, `integracoes/link.py`, `servidor/iniciar.py`, `servidor/demo.py` | Relógio, pastas (`caminhos.CODIGO` é a raiz do projeto; `caminhos.SCHEMA`), nuvem, túnel, executável, demonstração |
 | `web/app.js` | Interface: menu, telas, páginas dentro da aba, medição, almoxarifado… |
 | `web/iluminado.js` | Visor do Mapa iluminado e da tela Início (gesto, cores, fichas) |
 | `web/planejamento.js` | Dados da obra e cronograma |
@@ -192,9 +198,11 @@ aberta (D-113: os lançamentos esperam em `SEM_MEDICAO_ABERTA` e entram quando a
 | `web/apropriacao.js` | Apropriação direta e base de custo |
 | `web/mapa_iluminado.js` | Camada injetada no REV02 |
 
+(`web/` fica na raiz, fora do pacote.)
+
 ### 5.2 Banco (SQLite) e esquema
 
-`schema.sql` + `VERSAO_ESQUEMA` em `servicos.py`. Banco em versão anterior é recusado (`EsquemaAntigo`) até a
+`morrodacruz/nucleo/schema.sql` + `VERSAO_ESQUEMA` em `nucleo/servicos.py`. Banco em versão anterior é recusado (`EsquemaAntigo`) até a
 migração (`python importar.py --aplicar`, servidor parado; na nuvem o site migra ao recarregar). Marcos: v3 identidade
 estável · v5 estoque (reservas, estornos, custódia) · v7/v8 intervalos, retificação, foto original · v9 acesso · v10
 liberação e ocorrências · v11 compras · v12 programação · v13 parcela única e conferência da medição · v14 documentos ·
@@ -615,8 +623,10 @@ novo · e as provisórias de campo e almoxarifado (D-12 a D-18, D-21, D-22, D-40
   planilhas reais; `demo.py` usa `dados_demo/`).
 - **Repositório público:** nunca versione PDF real de NS, nomes, telefones, e-mails ou CREA de pessoas; nada pessoal
   copiado dos modelos.
-- Ramo do site: **não faça merge nem push em `claude/powerbi-modifications-wqxekj`**; trabalhe num ramo `claude/…` e
-  abra PR. Commits, PR e código sem identificador de modelo de IA.
+- Ramo do site: **`main`** (o Render e o PythonAnywhere publicam dele). **Não faça push direto em `main`**; trabalhe num
+  ramo `claude/…` e abra PR. Commits, PR e código sem identificador de modelo de IA.
+- Código novo entra no pacote, na área certa (`morrodacruz/<área>/`), com import absoluto; na raiz só entra uma entrada
+  nova quando houver um comando novo para digitar.
 - Sem dependência nova (Python ou JS), sem framework, sem biblioteca de mapa, sem CDN.
 - `pkill -f`/`pgrep -f padrão` casam com a própria linha de comando e matam o shell: guarde o PID (`$!`) ou filtre com
   `ps -eo pid,args | awk '$2 ~ /^python3/ && /server\.py --porta NNNN/'`.
@@ -629,14 +639,14 @@ aba pelo componente `PAGINAS` (endereço `#tela/pagina`, `sessionStorage` com `t
 permissão, mas quem decide é o servidor.
 
 **Mudança de esquema:** subir `VERSAO_ESQUEMA` (`servicos.py`) e a descrição em `aplicar_esquema`; a tabela nova em
-`schema.sql` (`CREATE TABLE IF NOT EXISTS`, com comentário de finalidade); `preparar_vNN` em `importacao.py`; a chamada
-`if 0 < versao < NN` em `importar.py`; teste de migração. Nunca renomear tabela-pai com chaves ativas (recriar com outro
+`morrodacruz/nucleo/schema.sql` (`CREATE TABLE IF NOT EXISTS`, com comentário de finalidade); `preparar_vNN` em
+`carga/importacao.py`; a chamada `if 0 < versao < NN` em `carga/importar.py`; teste de migração. Nunca renomear tabela-pai com chaves ativas (recriar com outro
 nome, copiar, descartar; `foreign_key_check` antes do COMMIT).
 
-**Rota nova:** função em `server.py`; registrar em `GET`/`POST`; `PERMISSAO` e `AUTOR` (o autor é a sessão) para
+**Rota nova:** função em `servidor/server.py`; registrar em `GET`/`POST`; `PERMISSAO` e `AUTOR` (o autor é a sessão) para
 gravação; `TELA_GET` ou `TELA_ARQUIVO` para consulta; download com `A.exigir` e `A.auditar`.
 
-**Testes:** `python -m unittest discover -s tests` (448 testes em 26/10/2026, ~7 min; 2 pulados). Os de base real
+**Testes:** `python -m unittest discover -s tests` (469 testes em 26/10/2026, ~8 min; 2 pulados). Os de base real
 exigem as planilhas em `planilhas/`. Navegador: Playwright com o Chromium do ambiente
 (`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`, módulo `/opt/node-tools/node_modules/playwright`): logar, abrir
 `abrirAba('<tela>')`, conferir rolagem (`scrollWidth − innerWidth`), erros de página e respostas ≥ 500, em 390 e 1280 px.
