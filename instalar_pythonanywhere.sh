@@ -1,17 +1,23 @@
 #!/bin/bash
 # Instala (ou atualiza) o Sistema Morro da Cruz no PythonAnywhere — a conta gratuita serve. No console Bash de lá, cole:
 #
-#   [ -d ~/Projeto-Pessoal ] || git clone -b claude/powerbi-modifications-wqxekj --depth 1 https://github.com/gabrielghorta/Projeto-Pessoal.git ~/Projeto-Pessoal; bash ~/Projeto-Pessoal/morro-da-cruz/instalar_pythonanywhere.sh
+#   [ -d ~/projeto_morrodacruz_webapp ] || git clone --depth 1 https://github.com/gabrielghorta/projeto_morrodacruz_webapp.git ~/projeto_morrodacruz_webapp; bash ~/projeto_morrodacruz_webapp/instalar_pythonanywhere.sh
+#
+# Repositório privado: o git pede usuário e senha; a senha é um token do GitHub (Settings > Developer settings >
+# Fine-grained tokens, só leitura do conteúdo deste repositório). Passo a passo em docs/NUVEM.md.
 #
 # O que ele faz: baixa a versão mais nova do código; instala o openpyxl e o pypdf (leitura da nota de serviço); monta a obra das planilhas do repositório
 # (banco de demonstração, perfil TESTE) e pede o seu administrador; liga o site em https://<seu usuário>.pythonanywhere.com
-# Pode rodar de novo quantas vezes quiser: não apaga nada (os dados ficam em morro-da-cruz/dados_demo, fora do Git).
+# Pode rodar de novo quantas vezes quiser: não apaga nada (os dados ficam em dados_demo/ e dados/, fora do Git).
+# Quem vinha da instalação antiga (~/Projeto-Pessoal/morro-da-cruz): os dados de lá são copiados para cá na primeira vez,
+# e a pasta antiga fica intacta.
 set -u
-PASTA="$HOME/Projeto-Pessoal/morro-da-cruz"
+PASTA="$HOME/projeto_morrodacruz_webapp"
+ANTIGA="$HOME/Projeto-Pessoal/morro-da-cruz"
 cd "$PASTA" || { echo "Pasta $PASTA não encontrada: cole o comando completo (com o git clone)."; exit 1; }
 
 echo "== 1/4 Código: buscando a versão mais nova"
-git -C "$HOME/Projeto-Pessoal" pull --ff-only || echo "   (não consegui atualizar; sigo com a versão que já está aqui)"
+git -C "$PASTA" pull --ff-only || echo "   (não consegui atualizar; sigo com a versão que já está aqui)"
 
 PY=""
 for v in 3.13 3.12 3.11; do command -v "python$v" >/dev/null && { PY="python$v"; break; }; done
@@ -25,6 +31,17 @@ for v in 3.13 3.12 3.11; do
 done
 
 echo "== 3/4 Banco da obra e administrador"
+for d in dados_demo dados; do                          # instalação antiga: copia os dados uma vez, sem mexer na origem
+  [ -d "$ANTIGA/$d" ] && [ ! -e "$PASTA/$d" ] || continue
+  echo "   Copiando $ANTIGA/$d para $PASTA/$d (a pasta antiga fica como está)"
+  cp -a "$ANTIGA/$d" "$PASTA/$d" || { echo "Não consegui copiar $ANTIGA/$d: nada foi alterado na instalação antiga."; exit 1; }
+  for db in "$ANTIGA/$d"/*.db; do                      # o banco vai pela cópia do próprio SQLite (consistente com o site no ar)
+    [ -f "$db" ] || continue
+    rm -f "$PASTA/$d/$(basename "$db")"-journal "$PASTA/$d/$(basename "$db")"-wal "$PASTA/$d/$(basename "$db")"-shm
+    "$PY" -c "import sqlite3, sys; d = sqlite3.connect(sys.argv[2]); sqlite3.connect(sys.argv[1]).backup(d); d.close()" \
+      "$db" "$PASTA/$d/$(basename "$db")" || { echo "Não consegui copiar o banco $db."; exit 1; }
+  done
+done
 "$PY" nuvem.py preparar || exit 1
 
 echo "== 4/4 Site"
