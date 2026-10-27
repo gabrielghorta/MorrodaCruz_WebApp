@@ -186,6 +186,14 @@ class TestConferenciaEFechamento(BaseMedicao):
                 S.criar_medicao(self.c, n, "2027-12-01", "2027-12-31")
         self.assertEqual(self.q("SELECT COUNT(*) FROM medicoes"), [(2,)])
 
+    def test_periodo_da_medicao_so_com_datas(self):
+        """O período é comparado como texto e aparece na lista de medições: o que não é data (até HTML) é recusado."""
+        for ini, fim in (("1<img src=x onerror=alert(1)>", "2027-12-31"), ("2027-12-01", "31/12/2027"), ("", "2027-12-31")):
+            with self.assertRaisesRegex(S.RegraViolada, "Período inválido"):
+                S.criar_medicao(self.c, 3, ini, fim)
+        mid = S.criar_medicao(self.c, 3, "2027-12-01T00:00", "2027-12-31")
+        self.assertEqual(self.q("SELECT periodo_ini, periodo_fim FROM medicoes WHERE id=?", mid), [("2027-12-01", "2027-12-31")])
+
 
 class TestOkPendente(BaseMedicao):
     def setUp(self):

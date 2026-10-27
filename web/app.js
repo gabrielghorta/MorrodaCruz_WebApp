@@ -1114,7 +1114,7 @@ async function carregarMedicoes() {
   const ms = await api('/api/medicoes');
   if (!ms.length) carregarCaminhoMedicao(null);
   const sel = $('#medSel'), atual = sel.value;
-  sel.innerHTML = ms.map(m => `<option value="${m.id}">${m.numero}ª — ${m.periodo_ini} a ${m.periodo_fim} (${m.status})</option>`).join('');
+  sel.innerHTML = ms.map(m => `<option value="${m.id}">${m.numero}ª — ${esc(m.periodo_ini)} a ${esc(m.periodo_fim)} (${esc(m.status)})</option>`).join('');
   if (ms.length) {
     sel.value = atual && ms.some(m => String(m.id) === atual) ? atual : ms.find(m => m.status === 'ABERTA')?.id ?? ms[ms.length - 1].id;
     const f = $('#fMed'), ult = ms[ms.length - 1], ini = new Date(ult.periodo_fim + 'T12:00:00');
@@ -1439,7 +1439,9 @@ document.addEventListener('click', async ev => {
     await acao(() => api('/api/usuarios', { acao: 'senha', login: s.dataset.usrSenha, senha }), 'Senha redefinida; as sessões dessa pessoa foram encerradas.').catch(() => null); }
 });
 
-const dataBR = d => d ? d.split('-').reverse().join('/') : '—';
+// vai direto no HTML das telas: escapada, como todo texto que vem do banco (uma data é só dígitos e hífens, mas o
+// servidor não confere o formato em todas as rotas)
+const dataBR = d => d ? esc(String(d).split('-').reverse().join('/')) : '—';
 // planilhas e mapa do projeto que vêm com o sistema (config/fontes.json): baixam do próprio servidor, sem Drive
 const tamanho = b => b >= 1048576 ? `${nf(b / 1048576, 1)} MB` : `${nf(Math.max(1, Math.round(b / 1024)), 0)} KB`;
 /* ---------------------------------------------------------------- Google Drive conectado: fotos e notas sobem sozinhas */

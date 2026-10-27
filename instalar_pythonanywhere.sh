@@ -12,6 +12,7 @@
 # Quem vinha da instalação antiga (~/Projeto-Pessoal/morro-da-cruz): os dados de lá são copiados para cá na primeira vez,
 # e a pasta antiga fica intacta.
 set -u
+USER="${USER:-$(id -un)}"                              # o endereço do site é o nome da conta (vazio em alguns consoles)
 PASTA="$HOME/morrodacruz_webapp"
 ANTIGA="$HOME/Projeto-Pessoal/morro-da-cruz"
 cd "$PASTA" || { echo "Pasta $PASTA não encontrada: cole o comando completo (com o git clone)."; exit 1; }
