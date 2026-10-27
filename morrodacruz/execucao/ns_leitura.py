@@ -266,8 +266,9 @@ def _extrair_paginas(dados, extrator='auto'):
             caminho = os.path.join(tmp, 'ns.pdf')
             with open(caminho, 'wb') as f:
                 f.write(dados)
+            # a saída é UTF-8 (-enc UTF-8): sem dizer o encoding, o Windows a lê em cp1252 e a 2ª leitura não confere nada
             out = subprocess.run(['pdftotext', '-layout', '-enc', 'UTF-8', caminho, '-'], capture_output=True,
-                                 text=True, timeout=60).stdout
+                                 text=True, encoding='utf-8', errors='replace', timeout=60).stdout
         paginas = out.split('\f')
         if paginas and not paginas[-1].strip():
             paginas.pop()

@@ -3,8 +3,11 @@ a NS 006 de outra obra recusada pelo contrato, contas quebradas, PDF sem texto e
 Os arquivos reais (com nome e CREA de pessoas) não ficam no repositório: o teste deles só roda com MC_NS_EXEMPLOS
 apontando para a pasta local com ns_assinada.pdf, ns_nao_assinada.pdf, ns_planilha.xls e croqui.pdf."""
 import os
+import shutil
+import subprocess
 import sys
 import unittest
+from unittest import mock
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(AQUI))
@@ -226,6 +229,26 @@ class PdfsReais(unittest.TestCase):
             lidas.append(r['impressao_dados'])
         self.assertEqual(lidas[0], lidas[1])
 
+
+
+@unittest.skipUnless(shutil.which("pdftotext"), "pdftotext ausente: sem a 2ª leitura")
+class PdftotextComoNoWindows(unittest.TestCase):
+    def test_saida_do_pdftotext_lida_em_utf8(self):
+        """Reprodução: no Windows, text=True sem encoding decodifica a saída em cp1252. "NÓ9.1" virava "NÃ“9.1", a 2ª
+        leitura não confirmava nada e toda NS com célula vazia caía em E05 (44 testes vermelhos no CI do Windows)."""
+        real = subprocess.run
+
+        def como_windows(cmd, *a, **kw):
+            if kw.get("text") and not kw.get("encoding"):
+                r = real(cmd, *a, **dict(kw, text=False))
+                r.stdout = r.stdout.decode("cp1252", errors="replace")
+                return r
+            return real(cmd, *a, **kw)
+        pdf = NS.pdf_de_texto(["NOTA DE SERVIÇO   NÓ9.1 - TÊ 160x160   ESCAVAÇÃO"])
+        with mock.patch.object(L.subprocess, "run", side_effect=como_windows):
+            paginas, meta = L.extrair_paginas(pdf, "pdftotext")
+        self.assertEqual(meta["extrator"], "pdftotext -layout")
+        self.assertIn("NÓ9.1 - TÊ 160x160", "".join(paginas))
 
 if __name__ == '__main__':
     unittest.main()
