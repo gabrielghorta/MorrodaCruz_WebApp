@@ -1,7 +1,7 @@
 #!/bin/bash
 # Instala (ou atualiza) o Sistema Morro da Cruz no PythonAnywhere — a conta gratuita serve. No console Bash de lá, cole:
 #
-#   [ -d ~/projeto_morrodacruz_webapp ] || git clone --depth 1 https://github.com/gabrielghorta/projeto_morrodacruz_webapp.git ~/projeto_morrodacruz_webapp; bash ~/projeto_morrodacruz_webapp/instalar_pythonanywhere.sh
+#   [ -d ~/morrodacruz_webapp ] || git clone --depth 1 https://github.com/gabrielghorta/MorrodaCruz_WebApp.git ~/morrodacruz_webapp; bash ~/morrodacruz_webapp/instalar_pythonanywhere.sh
 #
 # Repositório privado: o git pede usuário e senha; a senha é um token do GitHub (Settings > Developer settings >
 # Fine-grained tokens, só leitura do conteúdo deste repositório). Passo a passo em docs/NUVEM.md.
@@ -12,7 +12,7 @@
 # Quem vinha da instalação antiga (~/Projeto-Pessoal/morro-da-cruz): os dados de lá são copiados para cá na primeira vez,
 # e a pasta antiga fica intacta.
 set -u
-PASTA="$HOME/projeto_morrodacruz_webapp"
+PASTA="$HOME/morrodacruz_webapp"
 ANTIGA="$HOME/Projeto-Pessoal/morro-da-cruz"
 cd "$PASTA" || { echo "Pasta $PASTA não encontrada: cole o comando completo (com o git clone)."; exit 1; }
 

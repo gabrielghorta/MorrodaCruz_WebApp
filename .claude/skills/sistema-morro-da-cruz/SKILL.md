@@ -5,7 +5,7 @@ description: Lógica completa do sistema web de gestão da obra Morro da Cruz (A
 
 # Sistema Morro da Cruz — a obra, o contrato Caesb × Ankara e o web app
 
-Estado de 26/10/2026, esquema do banco **v21**, repositório `gabrielghorta/projeto_morrodacruz_webapp`, ramo `main`
+Estado de 26/10/2026, esquema do banco **v21**, repositório `gabrielghorta/MorrodaCruz_WebApp`, ramo `main`
 (o sistema saiu do repositório pessoal `Projeto-Pessoal`, onde ficava na pasta `morro-da-cruz/` do ramo
 `claude/powerbi-modifications-wqxekj`, com a história da pasta). O código fica no pacote `morrodacruz/`, por área.
 
@@ -149,7 +149,7 @@ aberta (D-113: os lançamentos esperam em `SEM_MEDICAO_ABERTA` e entram quando a
   Data futura é recusada em tudo o que registra o que aconteceu (execução, clima, fotos, estoque, OK); programação,
   reserva e período de medição podem ser futuros.
 - **Hospedagem:** site no **PythonAnywhere** (grátis, 512 MB, um clique por mês para manter), instalado por
-  `instalar_pythonanywhere.sh` a partir do ramo `main` (clona em `~/projeto_morrodacruz_webapp`); alternativa Render (pago, `render.yaml`); `nuvem.py` (modo
+  `instalar_pythonanywhere.sh` a partir do ramo `main` (clona em `~/morrodacruz_webapp`); alternativa Render (pago, `render.yaml`); `nuvem.py` (modo
   nuvem: nada é "o próprio computador"); no Windows, `MorroDaCruz.exe` (PyInstaller, `iniciar.py`) com link temporário
   pelo túnel da Cloudflare (`link.py`). Na nuvem o banco é o de **demonstração** (`dados_demo/`, faixa DEMONSTRAÇÃO)
   até a aprovação dos controles (D-01); o site migra o esquema sozinho ao recarregar, com backup verificado antes.

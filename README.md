@@ -20,7 +20,7 @@ São Sebastião/DF*, Contrato Caesb × Ankara nº 10239/2026, LC 014/2026.
 ## Estrutura do projeto
 
 ```
-projeto_morrodacruz_webapp/
+MorrodaCruz_WebApp/
 ├── server.py, nuvem.py, iniciar.py,   entradas: o que se digita (python server.py, python importar.py --aplicar…);
 │   importar.py, usuarios.py, backup.py, cada uma tem poucas linhas e chama o módulo do pacote
 │   demo.py, montar_pacote_obra.py
@@ -57,7 +57,7 @@ O executável é gerado e testado no Windows pelo GitHub Actions (`.github/workf
 ## Testar no seu computador pelo código (demonstração, sem tocar no banco oficial)
 
 1. Instale o Python 3.11+ (no Windows, marque "Add python.exe to PATH") e rode `pip install openpyxl pillow "pypdf>=6,<7"`.
-2. Clone este repositório (`git clone https://github.com/gabrielghorta/projeto_morrodacruz_webapp.git`) e entre na pasta dele.
+2. Clone este repositório (`git clone https://github.com/gabrielghorta/MorrodaCruz_WebApp.git`) e entre na pasta dele.
 3. Copie as 5 planilhas oficiais para `planilhas/` e o HTML do mapa REV02 para `mapa/` (nomes em `planilhas/LEIA-ME.md` e `mapa/LEIA-ME.md`).
 4. Rode `python demo.py` e abra **http://127.0.0.1:8765**. Entre com `eng.demo` e a senha `demo-morro-123` (outros perfis: o comando lista).
    - O banco de demonstração fica em `dados_demo/`, separado de `dados/`. Ele é importado com o perfil de controles TESTE; a aprovação real (D-01) continua pendente.

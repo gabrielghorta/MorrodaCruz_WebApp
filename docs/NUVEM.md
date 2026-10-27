@@ -35,7 +35,7 @@ Os limites acima foram conferidos nas páginas públicas em 18/10/2026: [PythonA
 2. Crie o site: abra **Web** → **Add a new web app** → **Next** → **Manual configuration** → **Python 3.13** (ou a mais nova da lista) → **Next**.
 3. Abra **Consoles** → **Bash** e cole este comando (é uma linha só):
    ```
-   [ -d ~/projeto_morrodacruz_webapp ] || git clone --depth 1 https://github.com/gabrielghorta/projeto_morrodacruz_webapp.git ~/projeto_morrodacruz_webapp; bash ~/projeto_morrodacruz_webapp/instalar_pythonanywhere.sh
+   [ -d ~/morrodacruz_webapp ] || git clone --depth 1 https://github.com/gabrielghorta/MorrodaCruz_WebApp.git ~/morrodacruz_webapp; bash ~/morrodacruz_webapp/instalar_pythonanywhere.sh
    ```
    **Repositório privado:** o `git clone` pede usuário e senha. O usuário é o seu do GitHub; a senha é um token, não a
    senha da conta: no GitHub, **Settings → Developer settings → Personal access tokens → Fine-grained tokens →
@@ -56,12 +56,12 @@ Os limites acima foram conferidos nas páginas públicas em 18/10/2026: [PythonA
 
 **Depois:**
 - Uma vez por mês, abra **Web** e clique em **Run until 1 month from today**. O PythonAnywhere manda e-mail antes de desligar.
-- Para receber uma versão nova do sistema, cole de novo o comando do passo 3. Os dados não são apagados: ficam em `~/projeto_morrodacruz_webapp/dados_demo`, fora do Git.
+- Para receber uma versão nova do sistema, cole de novo o comando do passo 3. Os dados não são apagados: ficam em `~/morrodacruz_webapp/dados_demo`, fora do Git.
 
 ## 2. Render (pago, sem manutenção)
 
 1. Crie a conta em https://render.com, entrando com o GitHub. Cadastre o cartão em **Billing**.
-2. Clique em **New** → **Blueprint**, escolha o repositório **projeto_morrodacruz_webapp** e a branch `main`. Se ele não aparecer na lista (repositório privado), clique em **Configure GitHub** e dê ao Render acesso a ele. O Render lê o `render.yaml`, que fica na raiz do repositório.
+2. Clique em **New** → **Blueprint**, escolha o repositório **MorrodaCruz_WebApp** e a branch `main`. Se ele não aparecer na lista (repositório privado), clique em **Configure GitHub** e dê ao Render acesso a ele. O Render lê o `render.yaml`, que fica na raiz do repositório.
 3. Ele pede três valores. Preencha:
    - `MC_ADMIN_LOGIN`: o seu login, por exemplo `gabriel.horta`;
    - `MC_ADMIN_NOME`: o seu nome;
@@ -96,7 +96,7 @@ Os limites acima foram conferidos nas páginas públicas em 18/10/2026: [PythonA
   - o disco tem cópia diária automática da própria hospedagem;
   - além disso, pelo **Shell** do serviço: `python backup.py criar --db /var/data/dados_demo/obra.db --destino /var/data/backups`.
 - **PythonAnywhere:**
-  - no console Bash: `cd ~/projeto_morrodacruz_webapp && python3.13 backup.py criar --db dados_demo/obra.db --destino dados_demo/backups`;
+  - no console Bash: `cd ~/morrodacruz_webapp && python3.13 backup.py criar --db dados_demo/obra.db --destino dados_demo/backups`;
   - baixe a pasta do backup em **Files** uma vez por semana;
   - cada backup ocupa espaço dos 512 MB.
 
