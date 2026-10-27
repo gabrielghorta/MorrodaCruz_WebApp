@@ -88,7 +88,7 @@ O executável é gerado e testado no Windows pelo GitHub Actions (`.github/workf
    ```
    Cada gravação fica registrada com o usuário logado (auditoria). O log do servidor fica em `dados/logs/servidor.log`.
 6. Backup a qualquer momento: `python backup.py criar | verificar <pasta> | restaurar <pasta>`. A restauração exige o servidor parado.
-7. Testes: `python -m unittest discover -s tests -v`. Os testes do piloto Zona01 e de `test_base_real.py` exigem as planilhas reais em `planilhas/` (sempre em cópias descartáveis).
+7. Testes: `python -m unittest discover -s tests -v`. Os testes do piloto Zona01 e de `test_base_real.py` exigem as planilhas reais em `planilhas/` (sempre em cópias descartáveis). Os da nota de serviço supõem o `pdftotext` instalado (poppler: `apt install poppler-utils`, `choco install poppler`), a segunda leitura da NS; sem ele, a NS com célula vazia fica para a confirmação manual (E05) e esses testes falham.
 
 ## Importação (`importar.py` / `importacao.py`)
 

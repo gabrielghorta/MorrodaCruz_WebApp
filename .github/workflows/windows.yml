@@ -19,6 +19,17 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install openpyxl pillow "pypdf>=6,<7"
+      # a leitura da NS confere o pypdf com o pdftotext quando ele existe (ns_leitura.ler); os testes da NS supõem as
+      # duas leituras, como no Linux. Sem ele, célula vazia posta pela ordem fica incerta (E05) até a confirmação manual.
+      - name: pdftotext (poppler), a segunda leitura da NS
+        run: |
+          choco install poppler -y --no-progress
+          $c = Get-Command pdftotext -ErrorAction SilentlyContinue
+          if ($c) { Write-Host "pdftotext: $($c.Source)"; exit 0 }
+          $exe = Get-ChildItem "$env:ChocolateyInstall\lib\poppler" -Recurse -Filter pdftotext.exe | Select-Object -First 1
+          if (-not $exe) { throw "O pdftotext não foi instalado." }
+          $exe.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          Write-Host "pdftotext: $($exe.FullName)"
       - name: Testes (inclui os da base real e o ciclo da Zona01, com as planilhas do repositório)
         run: python -m unittest discover -s tests
 

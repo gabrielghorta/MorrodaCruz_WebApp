@@ -646,7 +646,8 @@ nome, copiar, descartar; `foreign_key_check` antes do COMMIT).
 **Rota nova:** função em `servidor/server.py`; registrar em `GET`/`POST`; `PERMISSAO` e `AUTOR` (o autor é a sessão) para
 gravação; `TELA_GET` ou `TELA_ARQUIVO` para consulta; download com `A.exigir` e `A.auditar`.
 
-**Testes:** `python -m unittest discover -s tests` (469 testes em 26/10/2026, ~8 min; 2 pulados). Os de base real
+**Testes:** `python -m unittest discover -s tests` (469 testes em 26/10/2026, ~8 min; 2 pulados). Os da NS supõem o
+`pdftotext` (poppler) no PATH, a segunda leitura; sem ele caem em E05 (o CI do Windows instala pelo choco). Os de base real
 exigem as planilhas em `planilhas/`. Navegador: Playwright com o Chromium do ambiente
 (`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`, módulo `/opt/node-tools/node_modules/playwright`): logar, abrir
 `abrirAba('<tela>')`, conferir rolagem (`scrollWidth − innerWidth`), erros de página e respostas ≥ 500, em 390 e 1280 px.
