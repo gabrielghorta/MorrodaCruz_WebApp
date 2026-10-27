@@ -330,6 +330,12 @@ console.log(JSON.stringify(r));
         for proibido in ("htmlSatelite", "ligarSatelite", "detalheSatelite", "/mapa/pb/", "/mapa/geral", "plnQuadros", "g.quadros"):
             self.assertNotIn(proibido, pln)
 
+    def test_telas_sem_o_caminho_do_repositorio_antigo(self):
+        """O sistema saiu da pasta morro-da-cruz/ do Projeto-Pessoal: os arquivos ficam na raiz (mapa/, planilhas/)."""
+        for nome in sorted(os.listdir(WEB)):
+            self.assertNotIn("morro-da-cruz/", ler(nome), nome)
+        self.assertIn("<code>mapa/</code>", ler("mapa_ausente.html"))
+
     def test_ids_unicos_e_scripts_carregados(self):
         todos = re.findall(r'id="([^"]+)"', self.html)
         self.assertEqual(len(todos), len(set(todos)))
