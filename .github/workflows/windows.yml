@@ -99,6 +99,7 @@ jobs:
   publicar:
     name: Publicar em Releases
     needs: [testes-windows, executavel]
+    if: github.ref == 'refs/heads/main'          # rodada manual num ramo de trabalho testa, mas não publica versão
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
