@@ -14,9 +14,9 @@ import copy
 import os
 import shutil
 import sys
-from datetime import date
 
 from morrodacruz.nucleo import caminhos  # noqa: E402
+from morrodacruz.nucleo import relogio as RL  # noqa: E402
 from morrodacruz.nucleo import acesso as A  # noqa: E402
 from morrodacruz.nucleo import backup  # noqa: E402
 from morrodacruz.carga import importacao as I  # noqa: E402
@@ -40,7 +40,7 @@ def cfg_demonstracao():
     cfg = copy.deepcopy(I.carregar_config())
     cfg["controles"] = [dict(copy.deepcopy(c), id="DEMO · " + c["id"], perfil="TESTE",
                              aprovacao={"status": "APROVADO", "por": "demonstração local (não substitui a aprovação do usuário)",
-                                        "em": date.today().isoformat()}) for c in cfg["controles"]]
+                                        "em": RL.hoje().isoformat()}) for c in cfg["controles"]]   # Brasília (D-109)
     cfg["perfil"] = "TESTE"
     return cfg
 

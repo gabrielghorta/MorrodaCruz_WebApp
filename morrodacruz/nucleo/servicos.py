@@ -15,6 +15,7 @@ import struct
 import os
 import re
 import sqlite3
+from datetime import date
 
 
 from morrodacruz.nucleo import caminhos
@@ -2408,6 +2409,10 @@ def criar_medicao(conn, numero, periodo_ini, periodo_fim, tipo="TESTE"):
     if tipo == "OFICIAL" and not medicao_oficial_liberada(conn):
         raise RegraViolada("Medição OFICIAL bloqueada: regras financeiras, controle de acesso e exportação no modelo "
                            "oficial ainda não foram validados. Use medição de TESTE.")
+    try:                                            # o período vira data de verdade (AAAA-MM-DD): é comparado e mostrado
+        periodo_ini, periodo_fim = (date.fromisoformat(str(d)[:10]).isoformat() for d in (periodo_ini, periodo_fim))
+    except ValueError:
+        raise RegraViolada("Período inválido: informe o início e o fim como datas.") from None
     if periodo_fim < periodo_ini:
         raise RegraViolada("Período inválido.")
     from morrodacruz.faturamento import pacote_medicao                           # o pacote (e o fechamento) só cabe nas colunas do BM
